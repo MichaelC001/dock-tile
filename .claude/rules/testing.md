@@ -37,7 +37,7 @@ it, and unit-test the seam so a broken rule fails loudly. Existing seams: `resol
 `IconStyle.from(…isDarkMode:)`, `shouldReregisterOnLaunch`, `classifyForMigration`,
 `runRegenerationBatch`, `helperInfoPlist` / `stripMainAppIcons`, `Debouncer`,
 `AppInstallChecker.classifyInstallStatus`, `PopoverMetrics` / `PopoverSettings.resolve`,
-`SmartAddEngine.rankGroups` / `.score` / `.coLaunchClusters` / `SmartAddCategory.identity`,
+`SmartAddEngine.rankGroups` (app + identity de-dup — no two cards share a name/icon) / `.score` / `.coLaunchClusters` / `.dominantCategory` (nil without signal, never a silent `.productivity`) / `SmartAddCategory.identity` + `Identity.coLaunch` backstop,
 `AnalyticsService.resolveConsent` / `.shouldCollect`,
 `DockTileDetailView.resolveDockAction` / `.dockActionIsEnabled` / `.contentSignature`,
 `HelperBundleManager.shouldPerformDockRemoval` / `.helperFolderName` (same-name tiles disambiguate to distinct folders) / `.helperIconsComplete` (bundle icon-integrity probe), `HelperMigrationManager.classifyHelperHealth` (self-heal targets pinned-and-broken bundles only — drafts safe), `DiagnosticsLog.shouldRecord` (verbose dev/prod gate),

@@ -31,10 +31,19 @@ The regression-prone decisions are `nonisolated static` functions taking plain v
 - `SmartAddCategory(lsCategory:)` + `.identity` — category → tile identity (name / SF Symbol / tint)
   per the design handoff (browsers→Browse/globe/blue · video→Watch/play.fill/pink ·
   developer-tools→Ship/chevron.../indigo · social→Chat/bubble.../green · productivity→Work/folder/blue).
+  `Identity.coLaunch` (Together/link/orange) is the backstop for a co-launch cluster that can't borrow
+  a category identity — distinct from every category in name, symbol AND tint.
 - `score(for:now:)` — recency × frequency, with a floor for undated apps.
 - `rankGroups(...)` — group by category (+ cross-category co-launch clusters), require **≥3 apps**,
   score, sort best-first, **greedy de-dup** (no app in two suggestions), relabel the top surviving
   group `.recency` ("Most used this week"). Caps apps per tile at `maxAppsPerGroup`.
+  **Identities are unique across cards (critical)**: a second pass assigns identities — a surviving
+  category group always owns its category identity (rank order never strips it); a co-launch cluster
+  borrows its dominant category only when no surviving category group is that category, else it takes
+  `Identity.coLaunch`; a group that can't get a free identity is dropped. `dominantCategory` returns
+  `nil` when no member has a mapped category — it used to fall back to `.productivity`, so every
+  uncategorised cluster (Chrome has no `LSApplicationCategoryType`) became a second "Work"/folder card
+  beside the real productivity group.
 - `coLaunchClusters(...)` — sessionize the log on a time gap, connected components of app pairs that
   co-occur in ≥N sessions.
 

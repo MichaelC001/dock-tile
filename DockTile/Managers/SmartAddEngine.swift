@@ -92,6 +92,13 @@ enum SmartAddCategory: String, CaseIterable {
         let name: String
         let symbol: String
         let tint: TintColor
+
+        /// Backstop identity for a co-launch ("Opened together") cluster that cannot borrow a
+        /// category identity — no member carries a mapped category (Chrome ships no
+        /// `LSApplicationCategoryType`; Figma is `graphics-design`, which we don't cluster on), or
+        /// that category's identity already belongs to another card. Deliberately distinct from
+        /// every category identity in name, symbol AND tint so two cards can never look alike.
+        static let coLaunch = Identity(name: "Together", symbol: "link", tint: .orange)
     }
 
     /// The tile identity for this category. Indigo has no preset, so it uses the system-indigo hex.
@@ -253,7 +260,7 @@ final class SmartAddEngine: ObservableObject {
         )
 
         return ranked.map { group in
-            let identity = group.category.identity
+            let identity = group.identity
             let appItems = group.records.map { record in
                 AppItem(bundleIdentifier: record.bundleId,
                         name: record.name,
@@ -308,7 +315,11 @@ final class SmartAddEngine: ObservableObject {
 
     /// A cluster of apps that would become one suggested tile. Pure data.
     struct RankedGroup: Equatable {
-        let category: SmartAddCategory
+        /// The category the group formed around (category groups) or leans towards (co-launch
+        /// clusters); `nil` when a cluster carries no category signal at all.
+        let category: SmartAddCategory?
+        /// The tile identity the card shows. Unique across one result set — see `rankGroups`.
+        let identity: SmartAddCategory.Identity
         let strategy: TileSuggestion.Strategy
         let records: [AppUsageRecord]  // best-scored first
         let score: Double
@@ -339,6 +350,10 @@ final class SmartAddEngine: ObservableObject {
     /// - Scores every group (sum of member scores) and sorts best-first.
     /// - Greedily de-dups so no app appears in two suggestions; a later group survives only if it
     ///   still has ≥3 unused apps.
+    /// - Assigns identities so no two suggestions share one: a surviving category group always owns
+    ///   its category identity; a co-launch cluster borrows its dominant category's identity only
+    ///   when no surviving category group is that category, else it takes `Identity.coLaunch`; a
+    ///   group that cannot get a free identity is dropped. (Regression: two "Work"/folder cards.)
     /// - Relabels the single best group `.recency` ("Most used this week") — the prominent top pick.
     ///
     /// Pure & `nonisolated` so it is unit-testable without any I/O.
@@ -379,8 +394,8 @@ final class SmartAddEngine: ObservableObject {
         for (category, members) in grouped {
             guard let category, members.count >= 3 else { continue }
             let ordered = order(members)
-            candidates.append(RankedGroup(category: category, strategy: .category,
-                                          records: ordered, score: total(ordered)))
+            candidates.append(RankedGroup(category: category, identity: category.identity,
+                                          strategy: .category, records: ordered, score: total(ordered)))
         }
 
         // Co-launch clusters (cross-category). Small boost — deliberate pairing beats mere category.
@@ -388,34 +403,63 @@ final class SmartAddEngine: ObservableObject {
             let members = cluster.compactMap { byId[$0] }
             guard members.count >= 3 else { continue }
             let ordered = order(members)
-            candidates.append(RankedGroup(category: dominantCategory(ordered), strategy: .coLaunch,
-                                          records: ordered, score: total(ordered) * 1.05))
+            let category = dominantCategory(ordered)
+            candidates.append(RankedGroup(category: category, identity: category?.identity ?? .coLaunch,
+                                          strategy: .coLaunch, records: ordered, score: total(ordered) * 1.05))
         }
 
         // Best-first; deterministic tie-break by identity name.
         candidates.sort { lhs, rhs in
             lhs.score != rhs.score ? lhs.score > rhs.score
-                                   : lhs.category.identity.name < rhs.category.identity.name
+                                   : lhs.identity.name < rhs.identity.name
         }
 
-        // Greedy de-dup: no app in two suggestions; the top surviving group becomes the recency pick.
-        var used = Set<String>()
-        var result: [RankedGroup] = []
+        // Pass 1 — greedy app de-dup: no app in two suggestions. Not capped at `limit` here, so a
+        // group dropped for its identity below can be back-filled by the next survivor.
+        var usedApps = Set<String>()
+        var survivors: [RankedGroup] = []
         for group in candidates {
-            let fresh = Array(group.records.filter { !used.contains($0.bundleId) }.prefix(maxAppsPerGroup))
+            let fresh = Array(group.records.filter { !usedApps.contains($0.bundleId) }.prefix(maxAppsPerGroup))
             guard fresh.count >= 3 else { continue }
+            survivors.append(RankedGroup(category: group.category, identity: group.identity,
+                                         strategy: group.strategy, records: fresh, score: group.score))
+            fresh.forEach { usedApps.insert($0.bundleId) }
+        }
+
+        // Pass 2 — identity de-dup: a surviving category group always owns its category identity
+        // (rank order never strips it); a co-launch cluster borrows its dominant category only when
+        // no surviving category group is that category and nothing earlier took it, else it falls
+        // back to the shared backstop. Whatever cannot get a free identity is dropped. The top
+        // surviving group becomes the recency pick.
+        let categoriesOwnedByGroups = Set(survivors.filter { $0.strategy == .category }.compactMap(\.category))
+        var usedIdentityNames = Set<String>()
+        var result: [RankedGroup] = []
+        for group in survivors {
+            let identity: SmartAddCategory.Identity
+            if group.strategy == .category {
+                identity = group.identity
+            } else if let category = group.category,
+                      !categoriesOwnedByGroups.contains(category),
+                      !usedIdentityNames.contains(category.identity.name) {
+                identity = category.identity
+            } else {
+                identity = .coLaunch
+            }
+            guard !usedIdentityNames.contains(identity.name) else { continue }
+            usedIdentityNames.insert(identity.name)
+
             let strategy: TileSuggestion.Strategy = result.isEmpty ? .recency : group.strategy
-            result.append(RankedGroup(category: group.category, strategy: strategy,
-                                      records: fresh, score: group.score))
-            fresh.forEach { used.insert($0.bundleId) }
+            result.append(RankedGroup(category: group.category, identity: identity, strategy: strategy,
+                                      records: group.records, score: group.score))
             if result.count >= limit { break }
         }
         return result
     }
 
-    /// The category most members share, falling back to `.productivity` when a cluster spans
-    /// categories or carries no category signal. Pure.
-    nonisolated static func dominantCategory(_ records: [AppUsageRecord]) -> SmartAddCategory {
+    /// The category most members share, or `nil` when no member carries a mapped category (an
+    /// uncategorised or cross-category cluster). It used to fall back to `.productivity`, which
+    /// made every such cluster a second "Work"/folder card. Pure.
+    nonisolated static func dominantCategory(_ records: [AppUsageRecord]) -> SmartAddCategory? {
         var tally: [SmartAddCategory: Int] = [:]
         for record in records {
             if let category = SmartAddCategory(lsCategory: record.lsCategory) {
@@ -425,7 +469,7 @@ final class SmartAddEngine: ObservableObject {
         return tally.max { lhs, rhs in
             lhs.value != rhs.value ? lhs.value < rhs.value
                                    : lhs.key.identity.name > rhs.key.identity.name  // stable
-        }?.key ?? .productivity
+        }?.key
     }
 
     /// Detect apps repeatedly opened in the same session. Sessionizes the launch log on a time gap,

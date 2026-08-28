@@ -347,3 +347,157 @@ struct SmartAddCreateConfigurationTests {
         #expect(!manager.smartAddProvenanceIDs.contains(created.id))
     }
 }
+
+// MARK: - Identity uniqueness
+
+/// Regression guard for the "two cards both called Work with the same folder icon" defect: a
+/// co-launch cluster used to borrow `.productivity` as a silent fallback whenever its members had no
+/// mapped category, colliding with the real productivity category group. No two suggestions may
+/// share a tile identity (name / symbol / tint).
+@Suite("Smart Add Engine — identity uniqueness")
+struct SmartAddIdentityTests {
+
+    private let now = Date(timeIntervalSince1970: 1_700_000_000)
+
+    private func app(_ id: String, category: String?, uses: Int, daysAgo: Double = 0) -> AppUsageRecord {
+        AppUsageRecord(
+            bundleId: id,
+            name: id,
+            path: "/Applications/\(id).app",
+            lsCategory: category,
+            useCount: uses,
+            lastUsed: now.addingTimeInterval(-daysAgo * 86_400)
+        )
+    }
+
+    private let productivity = "public.app-category.productivity"
+    private let social = "public.app-category.social-networking"
+
+    @Test("A co-launch cluster with no category signal is not silently classified as productivity")
+    func coLaunchWithoutSignalIsNotProductivity() throws {
+        // Chrome-style apps: no LSApplicationCategoryType at all.
+        let apps = [
+            app("x1", category: nil, uses: 50),
+            app("x2", category: nil, uses: 40),
+            app("x3", category: nil, uses: 30)
+        ]
+        let result = SmartAddEngine.rankGroups(
+            apps: apps, coLaunch: [["x1", "x2", "x3"]],
+            excludedBundleIds: [], excludedPaths: [], now: now, limit: 3
+        )
+        let group = try #require(result.first)
+        #expect(group.category != .productivity)
+    }
+
+    @Test("dominantCategory has no answer when no member carries a mapped category")
+    func dominantCategoryWithoutSignal() {
+        let records = [app("x1", category: nil, uses: 1), app("x2", category: "public.app-category.games", uses: 1)]
+        #expect(SmartAddEngine.dominantCategory(records) == nil)
+    }
+
+    @Test("The co-launch backstop identity is Together / link / orange — distinct from every category")
+    func coLaunchBackstopIdentity() {
+        let backstop = SmartAddCategory.Identity.coLaunch
+        #expect(backstop == SmartAddCategory.Identity(name: "Together", symbol: "link", tint: .orange))
+        for category in SmartAddCategory.allCases {
+            #expect(category.identity.name != backstop.name)
+            #expect(category.identity.symbol != backstop.symbol)
+            #expect(category.identity.tint != backstop.tint)
+        }
+    }
+
+    @Test("A co-launch cluster with no category signal gets the Together backstop identity")
+    func coLaunchWithoutSignalGetsBackstop() throws {
+        let apps = [
+            app("x1", category: nil, uses: 50),
+            app("x2", category: nil, uses: 40),
+            app("x3", category: nil, uses: 30)
+        ]
+        let result = SmartAddEngine.rankGroups(
+            apps: apps, coLaunch: [["x1", "x2", "x3"]],
+            excludedBundleIds: [], excludedPaths: [], now: now, limit: 3
+        )
+        let group = try #require(result.first)
+        #expect(group.category == nil)
+        #expect(group.identity == .coLaunch)
+    }
+
+    @Test("A category group keeps its identity even when an outranking co-launch cluster leans the same way")
+    func categoryGroupOwnsIdentityOverOutrankingCluster() throws {
+        // The reported defect's shape: a hot cluster of two productivity apps + one uncategorised app
+        // outranks the real productivity group of three other apps. Both used to be "Work".
+        let apps = [
+            app("c1", category: productivity, uses: 90),
+            app("c2", category: productivity, uses: 80),
+            app("c3", category: nil, uses: 70),
+            app("p1", category: productivity, uses: 5),
+            app("p2", category: productivity, uses: 5),
+            app("p3", category: productivity, uses: 5)
+        ]
+        let result = SmartAddEngine.rankGroups(
+            apps: apps, coLaunch: [["c1", "c2", "c3"]],
+            excludedBundleIds: [], excludedPaths: [], now: now, limit: 3
+        )
+        #expect(result.count == 2)
+        // The cluster still ranks first and is the "Most used this week" pick...
+        #expect(result[0].strategy == .recency)
+        #expect(result[0].records.map(\.bundleId) == ["c1", "c2", "c3"])
+        // ...but it does NOT take "Work" away from the real productivity group.
+        #expect(result[0].identity == .coLaunch)
+        #expect(result[1].strategy == .category)
+        #expect(result[1].identity == SmartAddCategory.productivity.identity)
+    }
+
+    @Test("A co-launch cluster borrows its dominant category identity when no category group claims it")
+    func coLaunchBorrowsUnclaimedCategoryIdentity() throws {
+        // Two social apps + one uncategorised app opened together; social alone is below three, so
+        // there is no social category group to collide with → the cluster is "Chat" (design mock).
+        let apps = [
+            app("s1", category: social, uses: 30),
+            app("s2", category: social, uses: 20),
+            app("x1", category: nil, uses: 10)
+        ]
+        let result = SmartAddEngine.rankGroups(
+            apps: apps, coLaunch: [["s1", "s2", "x1"]],
+            excludedBundleIds: [], excludedPaths: [], now: now, limit: 3
+        )
+        #expect(result.count == 1)
+        let group = try #require(result.first)
+        #expect(group.category == .social)
+        #expect(group.identity == SmartAddCategory.social.identity)
+    }
+
+    @Test("A second co-launch cluster that would also need the backstop is dropped")
+    func secondBackstopClusterIsDropped() throws {
+        let apps = [
+            app("x1", category: nil, uses: 50), app("x2", category: nil, uses: 40), app("x3", category: nil, uses: 30),
+            app("y1", category: nil, uses: 20), app("y2", category: nil, uses: 15), app("y3", category: nil, uses: 10)
+        ]
+        let result = SmartAddEngine.rankGroups(
+            apps: apps, coLaunch: [["x1", "x2", "x3"], ["y1", "y2", "y3"]],
+            excludedBundleIds: [], excludedPaths: [], now: now, limit: 3
+        )
+        #expect(result.count == 1)
+        let group = try #require(result.first)
+        #expect(group.identity == .coLaunch)
+        #expect(group.records.map(\.bundleId) == ["x1", "x2", "x3"])
+    }
+
+    @Test("No two suggestions ever share a tile identity")
+    func identitiesAreUnique() {
+        let apps = [
+            app("p1", category: productivity, uses: 5), app("p2", category: productivity, uses: 5), app("p3", category: productivity, uses: 5),
+            app("s1", category: social, uses: 5), app("s2", category: social, uses: 5), app("s3", category: social, uses: 5),
+            app("x1", category: nil, uses: 50), app("x2", category: nil, uses: 40), app("x3", category: nil, uses: 30),
+            app("y1", category: nil, uses: 20), app("y2", category: nil, uses: 15), app("y3", category: nil, uses: 10)
+        ]
+        let result = SmartAddEngine.rankGroups(
+            apps: apps, coLaunch: [["x1", "x2", "x3"], ["y1", "y2", "y3"]],
+            excludedBundleIds: [], excludedPaths: [], now: now, limit: 4
+        )
+        // x → Together, y → dropped (backstop taken), social → Chat, productivity → Work.
+        #expect(result.count == 3)
+        #expect(Set(result.map(\.identity.name)).count == result.count)
+        #expect(Set(result.map(\.identity.symbol)).count == result.count)
+    }
+}
