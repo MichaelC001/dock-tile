@@ -6,6 +6,10 @@ DerivedData/
 
 # Local dev archives & coverage artifacts (not source)
 docs/dev-files/
+docs/sparkle-key-fixer/
+
+# Git worktrees for parallel Claude sessions (nested repos — never commit)
+.claude/worktrees/
 *.profraw
 
 # Xcode
