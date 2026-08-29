@@ -347,7 +347,8 @@ struct EmptyConfigurationView: View {
 
 // MARK: - Pane title band
 
-/// Squircle badge for Settings/About headers (the tile pages carry no icon — their hero is right below).
+/// Squircle badge for Settings/About sidebar rows. The title band itself is title-only — see
+/// `paneTitleBand` below — this identity lives on in the sidebar (`DockTileSidebarView`).
 struct PaneIcon: Equatable {
     let systemName: String
     let tint: Color
@@ -360,41 +361,33 @@ struct PaneIcon: Equatable {
 /// The title item shared by both `PaneTitleBand` variants below — written exactly once so the plain
 /// band and the trailing-actions band can never drift apart.
 @ToolbarContentBuilder
-private func paneTitleItem(title: String, icon: PaneIcon?) -> some ToolbarContent {
+private func paneTitleItem(title: String) -> some ToolbarContent {
     if #available(macOS 26.0, *) {
-        ToolbarItem(placement: .navigation) { PaneTitleLabel(title: title, icon: icon) }
+        ToolbarItem(placement: .navigation) { PaneTitleLabel(title: title) }
             .sharedBackgroundVisibility(.hidden)   // no Liquid Glass capsule around a title
     } else {
-        ToolbarItem(placement: .navigation) { PaneTitleLabel(title: title, icon: icon) }
+        ToolbarItem(placement: .navigation) { PaneTitleLabel(title: title) }
     }
 }
 
 private struct PaneTitleLabel: View {
     let title: String
-    let icon: PaneIcon?
 
     var body: some View {
-        HStack(spacing: 9) {
-            if let icon {
-                SettingsBadgeIcon(systemName: icon.systemName, tint: icon.tint, size: 26)
-                    .accessibilityHidden(true)
-            }
-            Text(title)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(.primary)
-                .lineLimit(1)
-        }
-        .accessibilityAddTraits(.isHeader)
+        Text(title)
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundStyle(.primary)
+            .lineLimit(1)
+            .accessibilityAddTraits(.isHeader)
     }
 }
 
 private struct PaneTitleBand: ViewModifier {
     let title: String
-    let icon: PaneIcon?
 
     func body(content: Content) -> some View {
         content.toolbar {
-            paneTitleItem(title: title, icon: icon)
+            paneTitleItem(title: title)
         }
     }
 }
@@ -405,18 +398,16 @@ private struct PaneTitleBand: ViewModifier {
 /// needs its own modifier rather than the plain `PaneTitleBand` fed empty content).
 private struct PaneTitleBandWithActions<Trailing: ToolbarContent>: ViewModifier {
     let title: String
-    let icon: PaneIcon?
     let trailing: Trailing
 
-    init(title: String, icon: PaneIcon?, @ToolbarContentBuilder trailing: () -> Trailing) {
+    init(title: String, @ToolbarContentBuilder trailing: () -> Trailing) {
         self.title = title
-        self.icon = icon
         self.trailing = trailing()
     }
 
     func body(content: Content) -> some View {
         content.toolbar {
-            paneTitleItem(title: title, icon: icon)
+            paneTitleItem(title: title)
             // `.toolbar(removing: .title)` (DockTileConfigurationView) drops the toolbar's automatic
             // flexible space, so trailing-placed items would otherwise collapse leftward next to the
             // title instead of trailing the band. Push them back to the trailing edge.
@@ -429,18 +420,17 @@ private struct PaneTitleBandWithActions<Trailing: ToolbarContent>: ViewModifier 
 }
 
 extension View {
-    /// Page header in the title band: `title` (+ optional squircle). Replaces `.navigationTitle`.
-    func paneTitleBand(_ title: String, icon: PaneIcon? = nil) -> some View {
-        modifier(PaneTitleBand(title: title, icon: icon))
+    /// Page header in the title band: the title text only. Replaces `.navigationTitle`.
+    func paneTitleBand(_ title: String) -> some View {
+        modifier(PaneTitleBand(title: title))
     }
 
     /// Page header with trailing toolbar actions (e.g. a primary-action button/group).
     func paneTitleBand<Trailing: ToolbarContent>(
         _ title: String,
-        icon: PaneIcon? = nil,
         @ToolbarContentBuilder trailing: () -> Trailing
     ) -> some View {
-        modifier(PaneTitleBandWithActions(title: title, icon: icon, trailing: trailing))
+        modifier(PaneTitleBandWithActions(title: title, trailing: trailing))
     }
 }
 

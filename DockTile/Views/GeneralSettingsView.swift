@@ -60,7 +60,7 @@ struct GeneralSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .paneTitleBand(AppStrings.Settings.general, icon: .general)
+        .paneTitleBand(AppStrings.Settings.general)
         .onAppear(perform: refreshLoginState)
         .alert(
             scanFoundMissing ? AppStrings.Alert.missingAppsTitle : AppStrings.Alert.missingAppsNoneTitle,
