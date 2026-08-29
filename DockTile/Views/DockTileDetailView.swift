@@ -138,16 +138,9 @@ struct DockTileDetailView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color(nsColor: .windowBackgroundColor))
-        .paneTitleBand(editedConfig.name)
-        // Toolbar with dynamic action button
-        .toolbar {
-            // `.toolbar(removing: .title)` (DockTileConfigurationView) drops the toolbar's
-            // automatic flexible space, so `.primaryAction` items collapse leftward next to the
-            // `.navigation`-placed title (PaneTitleBand) instead of trailing the band. Push it
-            // back to the trailing edge explicitly.
-            if #available(macOS 26.0, *) {
-                ToolbarSpacer(.flexible)
-            }
+        // Dynamic action button trails the title band via PaneTitleBand's own flexible spacer
+        // (single `.toolbar {}` call — see PaneTitleBand in DockTileConfigurationView.swift).
+        .paneTitleBand(editedConfig.name) {
             ToolbarItem(placement: .primaryAction) {
                 Button(action: handleDockAction) {
                     if isProcessing {

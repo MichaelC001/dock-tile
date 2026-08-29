@@ -350,22 +350,23 @@ struct PaneIcon: Equatable {
     static let about    = PaneIcon(systemName: "info.circle.fill", tint: .gray)
 }
 
-private struct PaneTitleBand: ViewModifier {
+/// The title item shared by both `PaneTitleBand` variants below — written exactly once so the plain
+/// band and the trailing-actions band can never drift apart.
+@ToolbarContentBuilder
+private func paneTitleItem(title: String, icon: PaneIcon?) -> some ToolbarContent {
+    if #available(macOS 26.0, *) {
+        ToolbarItem(placement: .navigation) { PaneTitleLabel(title: title, icon: icon) }
+            .sharedBackgroundVisibility(.hidden)   // no Liquid Glass capsule around a title
+    } else {
+        ToolbarItem(placement: .navigation) { PaneTitleLabel(title: title, icon: icon) }
+    }
+}
+
+private struct PaneTitleLabel: View {
     let title: String
     let icon: PaneIcon?
 
-    func body(content: Content) -> some View {
-        content.toolbar {
-            if #available(macOS 26.0, *) {
-                ToolbarItem(placement: .navigation) { label }
-                    .sharedBackgroundVisibility(.hidden)   // no Liquid Glass capsule around a title
-            } else {
-                ToolbarItem(placement: .navigation) { label }
-            }
-        }
-    }
-
-    private var label: some View {
+    var body: some View {
         HStack(spacing: 9) {
             if let icon {
                 SettingsBadgeIcon(systemName: icon.systemName, tint: icon.tint, size: 26)
@@ -380,10 +381,59 @@ private struct PaneTitleBand: ViewModifier {
     }
 }
 
+private struct PaneTitleBand: ViewModifier {
+    let title: String
+    let icon: PaneIcon?
+
+    func body(content: Content) -> some View {
+        content.toolbar {
+            paneTitleItem(title: title, icon: icon)
+        }
+    }
+}
+
+/// Title band + trailing toolbar actions in ONE `.toolbar {}` call — title, the flexible spacer, and
+/// `trailing` all ride together, so a pane's action items can never land in a separately-ordered
+/// `.toolbar {}` block (`ToolbarContentBuilder` has no zero-argument `buildBlock()`, which is why this
+/// needs its own modifier rather than the plain `PaneTitleBand` fed empty content).
+private struct PaneTitleBandWithActions<Trailing: ToolbarContent>: ViewModifier {
+    let title: String
+    let icon: PaneIcon?
+    let trailing: Trailing
+
+    init(title: String, icon: PaneIcon?, @ToolbarContentBuilder trailing: () -> Trailing) {
+        self.title = title
+        self.icon = icon
+        self.trailing = trailing()
+    }
+
+    func body(content: Content) -> some View {
+        content.toolbar {
+            paneTitleItem(title: title, icon: icon)
+            // `.toolbar(removing: .title)` (DockTileConfigurationView) drops the toolbar's automatic
+            // flexible space, so trailing-placed items would otherwise collapse leftward next to the
+            // title instead of trailing the band. Push them back to the trailing edge.
+            if #available(macOS 26.0, *) {
+                ToolbarSpacer(.flexible)
+            }
+            trailing
+        }
+    }
+}
+
 extension View {
     /// Page header in the title band: `title` (+ optional squircle). Replaces `.navigationTitle`.
     func paneTitleBand(_ title: String, icon: PaneIcon? = nil) -> some View {
         modifier(PaneTitleBand(title: title, icon: icon))
+    }
+
+    /// Page header with trailing toolbar actions (e.g. a primary-action button/group).
+    func paneTitleBand<Trailing: ToolbarContent>(
+        _ title: String,
+        icon: PaneIcon? = nil,
+        @ToolbarContentBuilder trailing: () -> Trailing
+    ) -> some View {
+        modifier(PaneTitleBandWithActions(title: title, icon: icon, trailing: trailing))
     }
 }
 
