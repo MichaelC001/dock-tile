@@ -11,7 +11,7 @@ LABEL=${1:?label}; shift
 ROW=""; CLICK=""; DARK=0
 while [[ $# -gt 0 ]]; do case "$1" in --row) ROW="$2"; shift 2;; --click) CLICK="$2"; shift 2;; --dark) DARK=1; shift;; *) echo "unknown $1"; exit 2;; esac; done
 APP_DIR=$(xcodebuild -project DockTile.xcodeproj -scheme DockTile -configuration Debug -showBuildSettings 2>/dev/null | awk -F' = ' '/ BUILT_PRODUCTS_DIR /{print $2; exit}')
-APP="$APP_DIR/Dock Tile Dev.app"; PROC="Dock Tile Dev"
+APP="$APP_DIR/Dock Tile Dev.app"
 mkdir -p build/captures
 open -a "$APP"; sleep 1.5
 # Target this exact bundle's PID, not the bare process name — a second "Dock Tile Dev" (another
@@ -22,9 +22,10 @@ PID=$(pgrep -f "$APP/Contents/MacOS/Dock Tile Dev" | head -1)
 # that breaks "entire contents" queries below — resolve it into a plain variable first.
 osascript -e "tell application \"System Events\"" -e "set p to first process whose unix id is $PID" -e "tell p to set frontmost to true" -e "end tell" >/dev/null
 if [[ -n "$ROW" ]]; then
-  osascript >/dev/null <<EOS
+  ROW_RESULT=$(osascript <<EOS
 tell application "System Events"
   set p to first process whose unix id is $PID
+  set foundRow to false
   tell p
   set winContents to entire contents of window 1
   set outlineEl to missing value
@@ -51,17 +52,28 @@ tell application "System Events"
       end repeat
       if matched then
         select r
+        set foundRow to true
         exit repeat
       end if
     end repeat
   end if
   end tell
+  if foundRow then
+    "matched"
+  else
+    "nomatch"
+  end if
 end tell
 EOS
+)
+  if [[ "$ROW_RESULT" != "matched" ]]; then
+    echo "abort: no sidebar row named \"$ROW\""
+    exit 4
+  fi
   sleep 0.8
 fi
 if [[ -n "$CLICK" ]]; then
-  P=$(osascript -e "tell application \"System Events\" to tell process \"$PROC\" to get position of window 1" | tr -d ' ')
+  P=$(osascript -e "tell application \"System Events\"" -e "set p to first process whose unix id is $PID" -e "tell p to get position of window 1" -e "end tell" | tr -d ' ')
   osascript -e "tell application \"System Events\" to click at {$(( ${P%%,*} + ${CLICK%%,*} )), $(( ${P#*,} + ${CLICK#*,} ))}" >/dev/null
   sleep 0.8
 fi
