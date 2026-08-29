@@ -1,7 +1,8 @@
 #!/bin/zsh
 # Capture the running dev app's main window to build/captures/<label>.png.
 # Usage: Scripts/dev-capture.sh <label> [--row "General"] [--click X,Y] [--dark]
-#   --row   clicks the sidebar row by its accessibility name (SwiftUI List rows expose the label).
+#   --row   selects the sidebar row by its accessibility name via the AX "select" action on the row
+#           (AXPress on the row's static-text label is a no-op in this app's SwiftUI List).
 #   --click clicks a window-relative point (pt) — the fallback when --row finds nothing; sidebar rows
 #           sit at x≈60 and y≈ 84 + 32·index (measure once off a capture).
 # Requires: the terminal has Accessibility + Automation (System Events) access.
@@ -13,19 +14,48 @@ APP_DIR=$(xcodebuild -project DockTile.xcodeproj -scheme DockTile -configuration
 APP="$APP_DIR/Dock Tile Dev.app"; PROC="Dock Tile Dev"
 mkdir -p build/captures
 open -a "$APP"; sleep 1.5
-osascript -e "tell application \"System Events\" to tell process \"$PROC\" to set frontmost to true" >/dev/null
+# Target this exact bundle's PID, not the bare process name — a second "Dock Tile Dev" (another
+# worktree's dev build) can be running concurrently, and System Events' name-based "tell process"
+# resolves ambiguously between them, silently landing on the wrong instance's window.
+PID=$(pgrep -f "$APP/Contents/MacOS/Dock Tile Dev" | head -1)
+# "tell (first process whose unix id is X)" used directly keeps a dynamic AppleScript specifier
+# that breaks "entire contents" queries below — resolve it into a plain variable first.
+osascript -e "tell application \"System Events\"" -e "set p to first process whose unix id is $PID" -e "tell p to set frontmost to true" -e "end tell" >/dev/null
 if [[ -n "$ROW" ]]; then
   osascript >/dev/null <<EOS
-tell application "System Events" to tell process "$PROC"
-  set els to entire contents of window 1
-  repeat with e in els
+tell application "System Events"
+  set p to first process whose unix id is $PID
+  tell p
+  set winContents to entire contents of window 1
+  set outlineEl to missing value
+  repeat with e in winContents
     try
-      if (name of e as string) is "$ROW" then
-        click e
+      if (class of e as string) is "outline" then
+        set outlineEl to e
         exit repeat
       end if
     end try
   end repeat
+  if outlineEl is not missing value then
+    set rowCount to count of rows of outlineEl
+    repeat with i from 1 to rowCount
+      set r to row i of outlineEl
+      set rowContents to entire contents of r
+      set matched to false
+      repeat with elem in rowContents
+        try
+          if (name of elem as string) is "$ROW" then
+            set matched to true
+          end if
+        end try
+      end repeat
+      if matched then
+        select r
+        exit repeat
+      end if
+    end repeat
+  end if
+  end tell
 end tell
 EOS
   sleep 0.8
@@ -39,8 +69,20 @@ restore_dark() { osascript -e "tell application \"System Events\" to tell appear
 WAS_DARK=$(osascript -e 'tell application "System Events" to tell appearance preferences to get dark mode')
 SUFFIX=""
 if [[ $DARK -eq 1 && "$WAS_DARK" == "false" ]]; then restore_dark true; SUFFIX="-dark"; sleep 1.2; fi
-POS=$(osascript -e "tell application \"System Events\" to tell process \"$PROC\" to get {position, size} of window 1" | tr -d ' ')
+POS=$(osascript -e "tell application \"System Events\"" -e "set p to first process whose unix id is $PID" -e "tell p to get {position, size} of window 1" -e "end tell" | tr -d ' ')
 X=${POS%%,*}; R=${POS#*,}; Y=${R%%,*}; R=${R#*,}; W=${R%%,*}; H=${R#*,}
+open -a "$APP"
+osascript -e "tell application \"System Events\"" -e "set p to first process whose unix id is $PID" -e "tell p to set frontmost to true" -e "end tell" >/dev/null
+sleep 0.4
+# Compare PID, not just name, for the same reason as above: a same-named process being frontmost
+# would pass a name-only check while still being the wrong window.
+FRONT_PID=$(osascript -e 'tell application "System Events" to get unix id of first application process whose frontmost is true')
+FRONT_NAME=$(osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true')
+if [[ "$FRONT_PID" != "$PID" ]]; then
+  echo "abort: frontmost is $FRONT_NAME"
+  if [[ $DARK -eq 1 && "$WAS_DARK" == "false" ]]; then restore_dark false; fi
+  exit 3
+fi
 screencapture -x -R "$X,$Y,$W,$H" "build/captures/$LABEL$SUFFIX.png"
 if [[ $DARK -eq 1 && "$WAS_DARK" == "false" ]]; then restore_dark false; fi
 echo "build/captures/$LABEL$SUFFIX.png"
