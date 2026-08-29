@@ -60,6 +60,7 @@ struct DockTileConfigurationView: View {
             // Sidebar with tiles + inline Settings, accordion-style sections
             DockTileSidebarView(selection: $selection, onAdd: handleAddTapped)
                 .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 280)
+                .toolbar(removing: .sidebarToggle)
         } detail: {
             detailColumn
         }

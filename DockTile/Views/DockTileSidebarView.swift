@@ -66,6 +66,10 @@ struct DockTileSidebarView: View {
         // `.sidebar` style gives the collapsible "Show/Hide" section headers (the Apple
         // Notes-style accordion) and the tile-row selection highlight.
         .listStyle(.sidebar)
+        // Belt-and-braces: the NavigationSplitView-level `.toolbar(removing: .sidebarToggle)`
+        // (DockTileConfigurationView) doesn't always suppress the toggle on this OS — remove it
+        // here too, on the sidebar column's own content.
+        .toolbar(removing: .sidebarToggle)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button(action: onAdd) {

@@ -141,7 +141,7 @@ struct DockTileDetailView: View {
         .paneTitleBand(editedConfig.name)
         // Toolbar with dynamic action button
         .toolbar {
-            ToolbarItem(placement: .confirmationAction) {
+            ToolbarItem(placement: .primaryAction) {
                 Button(action: handleDockAction) {
                     if isProcessing {
                         // Busy state INSIDE the button (same pattern as the Popover Appearance
