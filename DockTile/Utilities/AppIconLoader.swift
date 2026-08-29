@@ -130,28 +130,71 @@ enum AppInstallChecker {
     static func resolve(_ item: AppItem) -> Resolution {
         // Folders are validated purely by their stored path.
         if item.isFolder {
-            if let path = item.folderPath, FileManager.default.fileExists(atPath: path) {
+            if let path = item.folderPath, FileManager.default.fileExists(atPath: path), !isTrashed(path) {
                 return Resolution(status: .installed, resolvedPath: path)
             }
             return Resolution(status: .missing, resolvedPath: nil)
         }
 
-        let bundleURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: item.bundleIdentifier)
-
-        // Highest-confidence on-disk path: last-known location, else a common install dir.
-        let onDiskPath: String? = {
-            if let path = item.lastKnownPath, FileManager.default.fileExists(atPath: path) {
-                return path
-            }
-            return commonSearchPaths(forName: item.name).first { FileManager.default.fileExists(atPath: $0) }
+        // Launch Services resolves BY bundle identifier, so a hit is the right app by construction —
+        // but a registration outlives the bundle it points at, and a bundle dragged to the Trash is
+        // still on disk and still registered. So the path it hands back must itself be a live
+        // install location; merely getting a URL back proves nothing.
+        let launchServicesPath: String? = {
+            guard let path = NSWorkspace.shared
+                .urlForApplication(withBundleIdentifier: item.bundleIdentifier)?.path else { return nil }
+            return FileManager.default.fileExists(atPath: path) && !isTrashed(path) ? path : nil
         }()
 
+        // Path probes must confirm the bundle's IDENTITY, not just that something is there: two
+        // different apps can share a display name, and `lastKnownPath` may be stale.
+        let candidates = [item.lastKnownPath].compactMap { $0 } + commonSearchPaths(forName: item.name)
+        let onDiskPath = candidates.first { path in
+            acceptsProbedPath(
+                exists: FileManager.default.fileExists(atPath: path),
+                isTrashed: isTrashed(path),
+                foundBundleId: bundleIdentifier(atPath: path),
+                expected: item.bundleIdentifier
+            )
+        }
+
         let status = classifyInstallStatus(
-            bundleResolves: bundleURL != nil,
+            bundleResolves: launchServicesPath != nil,
             onDiskPathExists: onDiskPath != nil
         )
 
-        return Resolution(status: status, resolvedPath: bundleURL?.path ?? onDiskPath)
+        return Resolution(status: status, resolvedPath: launchServicesPath ?? onDiskPath)
+    }
+
+    /// Pure: is this path inside a Trash directory? Dragging an app to the Trash is how most people
+    /// uninstall — the bundle and its Launch Services registration both survive there, so a bare
+    /// existence check would keep calling it installed. Keys on the directory, not the word, so an
+    /// app legitimately named "Trash Cleaner" is unaffected.
+    nonisolated static func isTrashed(_ path: String) -> Bool {
+        path.contains("/.Trash/") || path.contains("/.Trashes/")
+    }
+
+    /// Pure: is a probed path acceptable evidence that `expected` is installed? It must exist, be
+    /// outside the Trash, AND actually host that bundle identifier.
+    ///
+    /// The identity check is what stops a same-named *different* app from vouching for a deleted
+    /// one — the production report where a Chrome web-app shim called "Claude" stayed "installed"
+    /// because `/Applications/Claude.app` (the unrelated native app) satisfied the name probe. The
+    /// tile kept showing the survivor's icon and Settings → Scan reported all-clear. Worse, the
+    /// scan writes the resolved path back into `lastKnownPath`, so an unverified match would poison
+    /// the item into confirming itself installed on every later scan.
+    nonisolated static func acceptsProbedPath(
+        exists: Bool,
+        isTrashed: Bool,
+        foundBundleId: String?,
+        expected: String
+    ) -> Bool {
+        exists && !isTrashed && foundBundleId == expected
+    }
+
+    /// The bundle identifier declared by the app bundle at `path`, if it is readable.
+    private static func bundleIdentifier(atPath path: String) -> String? {
+        NSDictionary(contentsOfFile: path + "/Contents/Info.plist")?["CFBundleIdentifier"] as? String
     }
 
     /// Pure decision seam — given installation signals, classify the item. No I/O.

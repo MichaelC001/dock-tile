@@ -175,9 +175,21 @@ opacity**, hiding the "app is gone" state. Detection now flags those apps instea
   second installation signal beside the bundle ID. Distinguishes a real uninstall from a
   transiently-unregistered Launch Services entry, and lets a **moved/updated** app self-heal by
   re-resolving rather than being flagged.
-- **Pure seam**: `AppInstallChecker.classifyInstallStatus(bundleResolves:onDiskPathExists:)` →
-  `.installed` / `.missing` (in `AppIconLoader.swift`, unit-tested). Installed = LS resolves the
-  bundle ID **or** an app bundle exists on disk (last-known path / common dir); else missing. A
+- **Pure seams**: `AppInstallChecker.classifyInstallStatus(bundleResolves:onDiskPathExists:)` →
+  `.installed` / `.missing`, fed by `acceptsProbedPath(exists:isTrashed:foundBundleId:expected:)` and
+  `isTrashed(_:)` (in `AppIconLoader.swift`, unit-tested). Installed = LS resolves the bundle ID
+  **or** an app bundle exists on disk (last-known path / common dir); else missing.
+- **A signal must prove identity, not just presence (critical)**: both probes are verified before they
+  count. A Launch Services hit must still exist on disk and sit outside the Trash — a registration
+  outlives the bundle, and dragging an app to the Trash (how most people uninstall) leaves it both
+  present and registered. A path probe must additionally host the **expected bundle identifier**:
+  `commonSearchPaths(forName:)` matches on display name, and two different apps can share one. Both
+  gaps produced the same shipped bug — an uninstalled Chrome web-app shim named "Claude" stayed
+  "installed" because `/Applications/Claude.app` (the unrelated native app) answered the name probe,
+  so the tile and its Dock popover kept drawing the survivor's icon and Settings → Scan reported
+  all-clear. It also self-perpetuated: `scanForMissingApps` writes `resolvedPath` back into
+  `lastKnownPath`, so an unverified match poisons the item into confirming itself forever. Guarded by
+  `AppInstallEvidenceTests` + `AppInstallCheckerResolveTests`. A
   cached `iconData` is **not** an install signal — it's DockTile's own snapshot. (An earlier
   `.unknown` case exempted pre-v8 entries that had a cached icon but no path; since *every* legacy
   entry fits that shape, any app uninstalled before upgrading was permanently un-flagged and kept
