@@ -486,6 +486,9 @@ struct PopoverPreviewCanvas: View {
     var settings: PopoverSettings? = nil
     var fit: Fit = .natural
     var signature: String = ""
+    /// When set, the embedded panel becomes the tile's app editor (Tile Detail). nil in Settings,
+    /// which shows the panel exactly as it ships.
+    var editing: PopoverEditing? = nil
 
     private let cornerRadius: CGFloat = 14
 
@@ -524,10 +527,10 @@ struct PopoverPreviewCanvas: View {
         Group {
             if layout == .grid {
                 StackPopoverView(configuration: configuration, onLaunch: {}, showsBackground: false,
-                                 isPreview: true, settingsOverride: settings)
+                                 isPreview: true, settingsOverride: settings, editing: editing)
             } else {
                 ListPopoverView(configuration: configuration, onLaunch: {}, showsBackground: false,
-                                isPreview: true, settingsOverride: settings)
+                                isPreview: true, settingsOverride: settings, editing: editing)
             }
         }
         .id(signature)

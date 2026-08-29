@@ -147,6 +147,10 @@ struct AppStringsTests {
         #expect(!AppStrings.Kind.application.isEmpty)
         #expect(!AppStrings.Kind.folder.isEmpty)
 
+        // Popover editing (Tile Detail's preview editor)
+        #expect(!AppStrings.PopoverOption.editingRemove.isEmpty)
+        #expect(!AppStrings.PopoverOption.editingNoAppsYet.isEmpty)
+
         // Error messages
         #expect(!AppStrings.Error.mainAppNotFound.isEmpty)
         #expect(!AppStrings.Error.failedToReadInfoPlist.isEmpty)

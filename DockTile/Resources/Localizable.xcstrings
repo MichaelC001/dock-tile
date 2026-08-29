@@ -2688,6 +2688,54 @@
           }
         }
       }
+    },
+    "popover.editing.remove": {
+      "comment": "Context menu / remove badge in the tile editor",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove"
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove"
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove"
+          }
+        }
+      }
+    },
+    "popover.editing.noAppsYet": {
+      "comment": "Tile editor empty state",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No apps yet. Use Add to choose what opens from this tile."
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No apps yet. Use Add to choose what opens from this tile."
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No apps yet. Use Add to choose what opens from this tile."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

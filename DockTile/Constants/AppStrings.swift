@@ -764,6 +764,17 @@ enum AppStrings {
             case .spacious: return spacious
             }
         }
+
+        static let editingRemove = NSLocalizedString(
+            "popover.editing.remove",
+            value: "Remove",
+            comment: "Context menu / remove badge in the tile editor"
+        )
+        static let editingNoAppsYet = NSLocalizedString(
+            "popover.editing.noAppsYet",
+            value: "No apps yet. Use Add to choose what opens from this tile.",
+            comment: "Tile editor empty state"
+        )
     }
 
     // MARK: - Menu Items
