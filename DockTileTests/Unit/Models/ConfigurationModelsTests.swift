@@ -382,6 +382,31 @@ struct DockTileConfigurationTests {
 
         #expect(config1.hashValue != config2.hashValue)
     }
+
+    // MARK: - Diagnostic identity (same-named tiles must be distinguishable in logs)
+
+    @Test("shortId is the first 8 characters of the tile's UUID")
+    func shortIdIsUUIDPrefix() throws {
+        let id = try #require(UUID(uuidString: "B4EF96A2-0F4B-4898-9F3B-5499C7B44256"))
+        let config = DockTileConfiguration(id: id, name: "Utils")
+        #expect(config.shortId == "B4EF96A2")
+        // Same prefix the generated bundle identifier carries, so a report line matches the Dock entry.
+        #expect(config.bundleIdentifier.hasSuffix(".B4EF96A2-0F4B-4898-9F3B-5499C7B44256"))
+    }
+
+    @Test("diagnosticName carries the name and the short id")
+    func diagnosticNameIncludesShortId() throws {
+        let id = try #require(UUID(uuidString: "B4EF96A2-0F4B-4898-9F3B-5499C7B44256"))
+        let config = DockTileConfiguration(id: id, name: "Utils")
+        #expect(config.diagnosticName == "'Utils' (B4EF96A2)")
+    }
+
+    @Test("Two same-named tiles have distinct diagnostic names")
+    func sameNameDistinctDiagnosticNames() {
+        let a = DockTileConfiguration(name: "Utils")
+        let b = DockTileConfiguration(name: "Utils")
+        #expect(a.diagnosticName != b.diagnosticName)
+    }
 }
 
 // MARK: - IconType Tests

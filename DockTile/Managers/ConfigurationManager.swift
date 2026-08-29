@@ -155,7 +155,7 @@ final class ConfigurationManager: ObservableObject {
         saveConfigurations()
 
         AnalyticsService.shared.log(.tileCreated)
-        DiagnosticsLog.shared.log("tile", "Created tile '\(config.name)'")
+        DiagnosticsLog.shared.log("tile", "Created tile \(config.diagnosticName)")
         print("✅ Created configuration: \(config.name) [\(config.id)]")
         print("   selectedConfigHasBeenEdited = \(selectedConfigHasBeenEdited) (should be false)")
         return config
@@ -194,7 +194,7 @@ final class ConfigurationManager: ObservableObject {
         saveConfigurations()
 
         AnalyticsService.shared.log(.tileCreated, ["source": "smart_add"])
-        DiagnosticsLog.shared.log("tile", "Created tile '\(config.name)' via Smart Add (\(config.appItems.count) app(s))")
+        DiagnosticsLog.shared.log("tile", "Created tile \(config.diagnosticName) via Smart Add (\(config.appItems.count) app(s))")
         print("✨ Created configuration via Smart Add: \(config.name) [\(config.id)]")
         return config
     }
@@ -203,7 +203,7 @@ final class ConfigurationManager: ObservableObject {
     func updateConfiguration(_ config: DockTileConfiguration) {
         guard let index = configurations.firstIndex(where: { $0.id == config.id }) else {
             print("⚠️ Configuration not found: \(config.id)")
-            DiagnosticsLog.shared.log("config", "updateConfiguration NO-OP — '\(config.name)' [\(config.id)] not in list (\(configurations.count) configs, \(config.appItems.count) app(s) dropped)")
+            DiagnosticsLog.shared.log("config", "updateConfiguration NO-OP — \(config.diagnosticName) [\(config.id)] not in list (\(configurations.count) configs, \(config.appItems.count) app(s) dropped)")
             return
         }
 
@@ -267,7 +267,7 @@ final class ConfigurationManager: ObservableObject {
         }
 
         AnalyticsService.shared.log(.tileRemoved, ["app_count": config.appItems.count])
-        DiagnosticsLog.shared.log("tile", "Deleted tile '\(config.name)' (\(config.appItems.count) app(s), visible=\(config.isVisibleInDock))")
+        DiagnosticsLog.shared.log("tile", "Deleted tile \(config.diagnosticName) (\(config.appItems.count) app(s), visible=\(config.isVisibleInDock))")
         configurations.remove(at: index)
 
         // If deleted config was selected, select another one (or nil if none left)
@@ -303,7 +303,7 @@ final class ConfigurationManager: ObservableObject {
 
         saveConfigurations()
 
-        DiagnosticsLog.shared.log("tile", "Duplicated tile '\(config.name)' → '\(duplicate.name)' (\(duplicate.appItems.count) app(s))")
+        DiagnosticsLog.shared.log("tile", "Duplicated tile \(config.diagnosticName) → '\(duplicate.name)' (\(duplicate.appItems.count) app(s))")
         print("📋 Duplicated configuration: \(config.name) → \(duplicate.name)")
         return duplicate
     }
@@ -335,7 +335,7 @@ final class ConfigurationManager: ObservableObject {
         configurations[configIndex].appItems.removeAll { $0.id == itemId }
         saveConfigurations()
 
-        DiagnosticsLog.shared.log("tile", "Removed item '\(removed?.name ?? "unknown")' from '\(configurations[configIndex].name)' (\(configurations[configIndex].appItems.count) item(s) left)")
+        DiagnosticsLog.shared.log("tile", "Removed item '\(removed?.name ?? "unknown")' from \(configurations[configIndex].diagnosticName) (\(configurations[configIndex].appItems.count) item(s) left)")
         print("➖ Removed app from configuration: \(configurations[configIndex].name)")
     }
 
@@ -349,7 +349,7 @@ final class ConfigurationManager: ObservableObject {
         configurations[configIndex].appItems.move(fromOffsets: source, toOffset: destination)
         saveConfigurations()
 
-        DiagnosticsLog.shared.log("tile", "Reordered items in '\(configurations[configIndex].name)'", verbose: true)
+        DiagnosticsLog.shared.log("tile", "Reordered items in \(configurations[configIndex].diagnosticName)", verbose: true)
         print("🔄 Reordered apps in configuration: \(configurations[configIndex].name)")
     }
 
@@ -578,19 +578,19 @@ final class ConfigurationManager: ObservableObject {
                 break
 
             case .skipNeverPinned:
-                DiagnosticsLog.shared.log("sync", "'\(config.name)' visible but never pinned (no helper bundle) — not hiding", verbose: true)
+                DiagnosticsLog.shared.log("sync", "\(config.diagnosticName) visible but never pinned (no helper bundle) — not hiding", verbose: true)
 
             case .markHidden:
                 print("   ⚠️ '\(config.name)' was removed from Dock - updating visibility")
-                DiagnosticsLog.shared.log("sync", "'\(config.name)' gone from Dock → marking hidden")
+                DiagnosticsLog.shared.log("sync", "\(config.diagnosticName) gone from Dock → marking hidden")
                 configurations[index].isVisibleInDock = false
                 hasChanges = true
 
             case .keepStuckPinned:
-                DiagnosticsLog.shared.log("sync", "'\(config.name)' hidden in config but still pinned in Dock (reconcile=\(reconcileDockedHiddenTiles))")
+                DiagnosticsLog.shared.log("sync", "\(config.diagnosticName) hidden in config but still pinned in Dock (reconcile=\(reconcileDockedHiddenTiles))")
 
             case .removeFromDock:
-                DiagnosticsLog.shared.log("sync", "'\(config.name)' hidden in config but still pinned in Dock (reconcile=\(reconcileDockedHiddenTiles))")
+                DiagnosticsLog.shared.log("sync", "\(config.diagnosticName) hidden in config but still pinned in Dock (reconcile=\(reconcileDockedHiddenTiles))")
                 print("   ⚠️ '\(config.name)' is hidden but still in Dock - removing to match config")
                 stuckHiddenConfigs.append(config)
             }
@@ -612,7 +612,7 @@ final class ConfigurationManager: ObservableObject {
                     try await HelperBundleManager.shared.removeFromDock(for: config)
                 } catch {
                     print("   ⚠️ Failed to remove stuck hidden tile '\(config.name)': \(error.localizedDescription)")
-                    DiagnosticsLog.shared.log("sync", "FAILED to remove stuck hidden tile '\(config.name)': \(error.localizedDescription)")
+                    DiagnosticsLog.shared.log("sync", "FAILED to remove stuck hidden tile \(config.diagnosticName): \(error.localizedDescription)")
                 }
             }
         }

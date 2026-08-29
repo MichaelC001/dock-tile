@@ -119,7 +119,7 @@ final class HelperAppDelegate: NSObject, NSApplicationDelegate {
         if let config = getCurrentConfiguration() {
             print("✓ Loaded config: \(config.name) with \(config.appItems.count) apps")
             // Tag this process in the shared diagnostics log with the tile name.
-            DiagnosticsLog.shared.setLabel("helper:\(config.name)")
+            DiagnosticsLog.shared.setLabel("helper:\(config.name) (\(config.shortId))")
             DiagnosticsLog.shared.log("helper", "Ready — \(config.appItems.count) app(s), mode=\(config.showInAppSwitcher ? "app" : "ghost"), bundle=\(currentBundleId)")
         } else {
             print("⚠️ No configuration found for bundle ID: \(currentBundleId)")
