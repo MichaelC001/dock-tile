@@ -64,6 +64,11 @@ struct DockTileConfigurationView: View {
             detailColumn
         }
         .navigationSplitViewStyle(.balanced)
+        // v2 chrome: the 52pt title band IS the page header. No window title, no sidebar toggle,
+        // no toolbar surface — each pane hosts its title + actions as toolbar items (PaneTitleBand).
+        .toolbar(removing: .title)
+        .toolbar(removing: .sidebarToggle)
+        .toolbarBackground(.hidden, for: .windowToolbar)
         // Strict frame enforcement: fixed width, flexible height
         .frame(
             minWidth: windowWidth,
@@ -273,6 +278,10 @@ private struct WindowAccessor: NSViewRepresentable {
             window.identifier = NSUserInterfaceItemIdentifier(AppDelegate.configurationWindowID)
         }
 
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.toolbarStyle = .unified
+
         let minHeight = isCustomising ? customiseMinHeight : defaultMinHeight
 
         // Lock horizontal size, allow vertical resize
@@ -325,6 +334,55 @@ struct EmptyConfigurationView: View {
             }
             .buttonStyle(.borderedProminent)
         }
+    }
+}
+
+// MARK: - Pane title band
+
+/// Squircle badge for Settings/About headers (the tile pages carry no icon — their hero is right below).
+struct PaneIcon: Equatable {
+    let systemName: String
+    let tint: Color
+    static let general  = PaneIcon(systemName: "gearshape.fill", tint: .gray)
+    static let popover  = PaneIcon(systemName: "macwindow.on.rectangle", tint: .indigo)
+    static let dockLock = PaneIcon(systemName: "lock.display", tint: .blue)
+    static let about    = PaneIcon(systemName: "info.circle.fill", tint: .gray)
+}
+
+private struct PaneTitleBand: ViewModifier {
+    let title: String
+    let icon: PaneIcon?
+
+    func body(content: Content) -> some View {
+        content.toolbar {
+            if #available(macOS 26.0, *) {
+                ToolbarItem(placement: .navigation) { label }
+                    .sharedBackgroundVisibility(.hidden)   // no Liquid Glass capsule around a title
+            } else {
+                ToolbarItem(placement: .navigation) { label }
+            }
+        }
+    }
+
+    private var label: some View {
+        HStack(spacing: 9) {
+            if let icon {
+                SettingsBadgeIcon(systemName: icon.systemName, tint: icon.tint, size: 26)
+                    .accessibilityHidden(true)
+            }
+            Text(title)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+        }
+        .accessibilityAddTraits(.isHeader)
+    }
+}
+
+extension View {
+    /// Page header in the title band: `title` (+ optional squircle). Replaces `.navigationTitle`.
+    func paneTitleBand(_ title: String, icon: PaneIcon? = nil) -> some View {
+        modifier(PaneTitleBand(title: title, icon: icon))
     }
 }
 

@@ -30,6 +30,7 @@ struct AppStringsTests {
 
         // Buttons
         #expect(!AppStrings.Button.add.isEmpty)
+        #expect(!AppStrings.Button.addATile.isEmpty)
         #expect(!AppStrings.Button.addToDock.isEmpty)
         #expect(!AppStrings.Button.back.isEmpty)
         #expect(!AppStrings.Button.cancel.isEmpty)

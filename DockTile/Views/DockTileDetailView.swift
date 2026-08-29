@@ -138,6 +138,7 @@ struct DockTileDetailView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color(nsColor: .windowBackgroundColor))
+        .paneTitleBand(editedConfig.name)
         // Toolbar with dynamic action button
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {

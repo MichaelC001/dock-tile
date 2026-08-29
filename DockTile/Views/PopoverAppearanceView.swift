@@ -116,7 +116,7 @@ struct PopoverAppearanceView: View {
             .frame(maxWidth: .infinity)
         }
         .background(NSColorBackgroundView.windowBackground)
-        .navigationTitle(AppStrings.Settings.popoverAppearance)
+        .paneTitleBand(AppStrings.Settings.popover, icon: .popover)
         .toolbar {
             // HIG: window-level actions live in the toolbar. Reset is the secondary (plain bordered)
             // button; Save is the primary (accent-tinted, prominent) action on the trailing edge.

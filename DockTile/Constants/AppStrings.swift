@@ -120,6 +120,8 @@ enum AppStrings {
             comment: "Add button label in file picker"
         )
 
+        static let addATile = NSLocalizedString("button.addATile", value: "Add a Tile…", comment: "Sidebar + / empty state: opens the Add a Tile dialog")
+
         static let addToDock = NSLocalizedString(
             "button.addToDock",
             value: "Add to Dock",

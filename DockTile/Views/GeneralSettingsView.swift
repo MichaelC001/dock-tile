@@ -85,7 +85,7 @@ struct GeneralSettingsView: View {
                 }
             }
             .formStyle(.grouped)
-            .navigationTitle(AppStrings.Settings.general)
+            .paneTitleBand(AppStrings.Settings.general, icon: .general)
         }
         .onAppear(perform: refreshLoginState)
         .alert(

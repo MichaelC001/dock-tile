@@ -66,13 +66,13 @@ struct DockTileSidebarView: View {
         // `.sidebar` style gives the collapsible "Show/Hide" section headers (the Apple
         // Notes-style accordion) and the tile-row selection highlight.
         .listStyle(.sidebar)
-        .navigationTitle(AppStrings.Sidebar.title)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button(action: onAdd) {
                     Image(systemName: "plus")
                 }
                 .accessibilityIdentifier("addTileButton")
+                .accessibilityLabel(AppStrings.Button.addATile)
                 .disabled(!configManager.canCreateNewTile)
                 .help(configManager.canCreateNewTile
                     ? AppStrings.Tooltip.createNewTile
