@@ -83,6 +83,7 @@ struct AppStringsTests {
 
         // Sidebar
         #expect(!AppStrings.Sidebar.title.isEmpty)
+        #expect(AppStrings.Sidebar.dockTileSection == "Dock Tile")
 
         // Sections
         #expect(!AppStrings.Section.selectedItems.isEmpty)

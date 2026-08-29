@@ -819,6 +819,12 @@ enum AppStrings {
             value: "Settings",
             comment: "Sidebar section header for the inline app settings panes"
         )
+
+        static let dockTileSection = NSLocalizedString(
+            "sidebar.dockTileSection",
+            value: "Dock Tile",
+            comment: "Sidebar section holding About"
+        )
     }
 
     // MARK: - Sections

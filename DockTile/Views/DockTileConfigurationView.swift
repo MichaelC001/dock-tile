@@ -11,6 +11,7 @@ import SwiftUI
 /// One of the inline Settings panes, hosted in the detail column instead of a detached window.
 enum SettingsPane: Hashable, CaseIterable {
     case general
+    case popover     // v2: top-level pane (was a drill-down inside General)
     case dockLock
 }
 
@@ -197,6 +198,9 @@ struct DockTileConfigurationView: View {
         switch pane {
         case .general:
             GeneralSettingsView()
+                .environmentObject(configManager)
+        case .popover:
+            PopoverAppearanceView()
                 .environmentObject(configManager)
         case .dockLock:
             DockLockSettingsView()

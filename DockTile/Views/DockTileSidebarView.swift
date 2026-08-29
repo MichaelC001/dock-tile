@@ -20,14 +20,9 @@ struct DockTileSidebarView: View {
     /// `DockTileConfigurationView`. Kept as a closure so the sheet stays hosted in the parent.
     var onAdd: () -> Void
 
-    /// Accordion expand/collapse state, persisted so it survives relaunch (Apple Notes-style).
-    @AppStorage("sidebar.tilesExpanded") private var tilesExpanded = true
-    @AppStorage("sidebar.settingsExpanded") private var settingsExpanded = true
-
     var body: some View {
         List(selection: $selection) {
-            // Tiles — collapsible accordion section with an always-visible disclosure triangle.
-            Section(AppStrings.Sidebar.tilesSection, isExpanded: $tilesExpanded) {
+            Section(AppStrings.Sidebar.tilesSection) {
                 if configManager.configurations.isEmpty {
                     // Tappable so the user can return to the empty-state detail after visiting a
                     // Settings pane (with zero tiles there's no tile row to select otherwise).
@@ -47,18 +42,25 @@ struct DockTileSidebarView: View {
             }
 
             // Settings — inline panes that replace the old detached ⌘, window.
-            Section(AppStrings.Sidebar.settingsSection, isExpanded: $settingsExpanded) {
+            Section(AppStrings.Sidebar.settingsSection) {
                 SettingsRow(
                     title: AppStrings.Settings.general,
-                    systemName: "gearshape.fill",
-                    tint: .gray
+                    systemName: PaneIcon.general.systemName,
+                    tint: PaneIcon.general.tint
                 )
                 .tag(SidebarSelection.settings(.general))
 
                 SettingsRow(
+                    title: AppStrings.Settings.popover,
+                    systemName: PaneIcon.popover.systemName,
+                    tint: PaneIcon.popover.tint
+                )
+                .tag(SidebarSelection.settings(.popover))
+
+                SettingsRow(
                     title: AppStrings.Settings.dockLock,
-                    systemName: "lock.display",
-                    tint: .blue
+                    systemName: PaneIcon.dockLock.systemName,
+                    tint: PaneIcon.dockLock.tint
                 )
                 .tag(SidebarSelection.settings(.dockLock))
             }

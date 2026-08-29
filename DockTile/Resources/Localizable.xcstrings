@@ -2304,6 +2304,30 @@
           }
         }
       }
+    },
+    "sidebar.dockTileSection": {
+      "comment": "Sidebar section holding About",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dock Tile"
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dock Tile"
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dock Tile"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
