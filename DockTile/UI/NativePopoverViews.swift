@@ -167,7 +167,8 @@ struct PopoverEditing {
     let onMove: (_ dragged: AppItem, _ target: AppItem) -> Void
 }
 
-/// Drag-to-reorder inside the panel; moved from DockTileDetailView's table (same semantics).
+/// Drag-to-reorder inside the panel; copied from DockTileDetailView's table (the original is
+/// removed in Task 9).
 struct PopoverItemDropDelegate: DropDelegate {
     let target: AppItem
     let dragged: () -> AppItem?
@@ -183,17 +184,56 @@ struct PopoverItemDropDelegate: DropDelegate {
 }
 
 extension View {
-    /// `onDrag` only in edit mode — the shipped popover never becomes a drag source.
-    @ViewBuilder func onDrag(if enabled: Bool, _ data: @escaping () -> NSItemProvider) -> some View {
-        if enabled { self.onDrag(data) } else { self }
+    /// Attaches editing-only modifiers ONLY when editing is on, so `editing == nil` leaves the
+    /// shipped view tree untouched.
+    @ViewBuilder func editingOnly<Content: View>(
+        _ editing: PopoverEditing?, _ transform: (Self) -> Content
+    ) -> some View {
+        if editing != nil { transform(self) } else { self }
     }
 
-    /// Attaches editing-only modifiers (drop target, remove badge, Delete key, context menu) ONLY
-    /// when editing is on, so `editing == nil` leaves the shipped view tree untouched.
-    @ViewBuilder func editingOnly<Content: View>(
-        _ enabled: Bool, @ViewBuilder _ transform: (Self) -> Content
+    /// The remove affordances shared by grid cells and list rows — context menu, Delete key and the
+    /// VoiceOver action. Absent from the shipped popover entirely. (The hover × badge is not here:
+    /// its placement is layout-specific, so each cell keeps its own.)
+    @ViewBuilder func removeAffordances(_ editing: PopoverEditing?, for app: AppItem) -> some View {
+        if let editing {
+            self
+                .contextMenu {
+                    Button(AppStrings.PopoverOption.editingRemove, role: .destructive) {
+                        editing.onRemove(app)
+                    }
+                }
+                .focusable()
+                .onDeleteCommand { editing.onRemove(app) }
+                .accessibilityElement(children: .combine)
+                .accessibilityAction(named: Text(AppStrings.PopoverOption.editingRemove)) {
+                    editing.onRemove(app)
+                }
+        } else {
+            self
+        }
+    }
+
+    /// Drag-to-reorder shared by grid cells and list rows — the shipped popover is neither a drag
+    /// source nor a drop target.
+    @ViewBuilder func reorderable(
+        _ editing: PopoverEditing?, app: AppItem, dragged: Binding<AppItem?>
     ) -> some View {
-        if enabled { transform(self) } else { self }
+        if let editing {
+            self
+                .onDrag {
+                    dragged.wrappedValue = app
+                    return NSItemProvider(object: app.id.uuidString as NSString)
+                }
+                .onDrop(of: [.text], delegate: PopoverItemDropDelegate(
+                    target: app,
+                    dragged: { dragged.wrappedValue },
+                    onMove: { d, t in editing.onMove(d, t) },
+                    onFinish: { dragged.wrappedValue = nil }
+                ))
+        } else {
+            self
+        }
     }
 }
 
@@ -381,18 +421,7 @@ struct StackPopoverView: View {
                 .onTapGesture {
                     launchAppAt(index: index)
                 }
-                .onDrag(if: editing != nil) {
-                    draggedItem = app
-                    return NSItemProvider(object: app.id.uuidString as NSString)
-                }
-                .editingOnly(editing != nil) {
-                    $0.onDrop(of: [.text], delegate: PopoverItemDropDelegate(
-                        target: app,
-                        dragged: { draggedItem },
-                        onMove: { dragged, target in editing?.onMove(dragged, target) },
-                        onFinish: { draggedItem = nil }
-                    ))
-                }
+                .reorderable(editing, app: app, dragged: $draggedItem)
             }
         }
         .padding(.top, gridTopPadding)
@@ -549,34 +578,24 @@ struct StackAppItem: View {
         )
         .contentShape(Rectangle())
         .onHover { isHovered = $0 }
-        .editingOnly(editing != nil) { cell in
-            cell
-                .overlay(alignment: .topLeading) {
-                    if let editing, isHovered {
-                        Button { editing.onRemove(app) } label: {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 8, weight: .heavy))
-                                .foregroundStyle(.white)
-                                .frame(width: 18, height: 18)
-                                .background(Color(nsColor: .tertiaryLabelColor), in: Circle())
-                                .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(AppStrings.PopoverOption.editingRemove)
-                        .offset(x: 2, y: -2)
+        .editingOnly(editing) { cell in
+            cell.overlay(alignment: .topLeading) {
+                if let editing, isHovered {
+                    Button { editing.onRemove(app) } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 8, weight: .heavy))
+                            .foregroundStyle(.white)
+                            .frame(width: 18, height: 18)
+                            .background(Color(nsColor: .tertiaryLabelColor), in: Circle())
+                            .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(AppStrings.PopoverOption.editingRemove)
+                    .offset(x: 2, y: -2)
                 }
-                .contextMenu {
-                    Button(AppStrings.PopoverOption.editingRemove, role: .destructive) {
-                        editing?.onRemove(app)
-                    }
-                }
-                .focusable()
-                .onDeleteCommand { editing?.onRemove(app) }
-                .accessibilityAction(named: Text(AppStrings.PopoverOption.editingRemove)) {
-                    editing?.onRemove(app)
-                }
+            }
         }
+        .removeAffordances(editing, for: app)
     }
 
     @ViewBuilder
@@ -685,18 +704,7 @@ struct ListPopoverView: View {
                         .onTapGesture {
                             launchAppAt(index: index)
                         }
-                        .onDrag(if: editing != nil) {
-                            draggedItem = app
-                            return NSItemProvider(object: app.id.uuidString as NSString)
-                        }
-                        .editingOnly(editing != nil) {
-                            $0.onDrop(of: [.text], delegate: PopoverItemDropDelegate(
-                                target: app,
-                                dragged: { draggedItem },
-                                onMove: { dragged, target in editing?.onMove(dragged, target) },
-                                onFinish: { draggedItem = nil }
-                            ))
-                        }
+                        .reorderable(editing, app: app, dragged: $draggedItem)
                     }
                 }
             }
@@ -745,7 +753,7 @@ struct ListPopoverView: View {
         Text(editing != nil ? AppStrings.PopoverOption.editingNoAppsYet : AppStrings.Empty.noApps)
             .font(.system(size: 12))
             .foregroundStyle(.secondary)
-            .editingOnly(editing != nil) {
+            .editingOnly(editing) {
                 $0.multilineTextAlignment(.center).padding(.horizontal, 12)
             }
             .frame(maxWidth: .infinity)
@@ -876,19 +884,7 @@ struct ListAppRow: View {
         .onHover { hovering in
             isHovered = hovering
         }
-        .editingOnly(editing != nil) { row in
-            row
-                .contextMenu {
-                    Button(AppStrings.PopoverOption.editingRemove, role: .destructive) {
-                        editing?.onRemove(app)
-                    }
-                }
-                .focusable()
-                .onDeleteCommand { editing?.onRemove(app) }
-                .accessibilityAction(named: Text(AppStrings.PopoverOption.editingRemove)) {
-                    editing?.onRemove(app)
-                }
-        }
+        .removeAffordances(editing, for: app)
     }
 
     @ViewBuilder
