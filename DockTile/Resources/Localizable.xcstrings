@@ -2328,6 +2328,54 @@
           }
         }
       }
+    },
+    "settings.addingTiles": {
+      "comment": "General: section holding the Smart Add toggle and the Add a Tile row",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adding Tiles"
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adding Tiles"
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adding Tiles"
+          }
+        }
+      }
+    },
+    "smartAdd.settingsToggleTitleV2": {
+      "comment": "General: Smart Add toggle title",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggest tiles from my apps"
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggest tiles from my apps"
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggest tiles from my apps"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

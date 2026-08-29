@@ -485,6 +485,12 @@ enum AppStrings {
             comment: "Shown when macOS is holding the login item for user approval"
         )
 
+        static let addingTiles = NSLocalizedString(
+            "settings.addingTiles",
+            value: "Adding Tiles",
+            comment: "General: section holding the Smart Add toggle and the Add a Tile row"
+        )
+
         static let dockLock = NSLocalizedString(
             "settings.dockLock",
             value: "Dock Lock",
@@ -867,14 +873,14 @@ enum AppStrings {
         )
 
         static let settingsToggleTitle = NSLocalizedString(
-            "smartAdd.settings.toggleTitle",
-            value: "Suggest tiles when I add one",
+            "smartAdd.settingsToggleTitleV2",
+            value: "Suggest tiles from my apps",
             comment: "Title of the Smart Add on/off toggle in General settings"
         )
 
         static let settingsToggleDescription = NSLocalizedString(
-            "smartAdd.settings.toggleDescription",
-            value: "When you click +, Dock Tile groups your recent apps into ready-made tiles to pick from. Turn this off to always start with an empty tile.",
+            "smartAdd.privacyFootnote",
+            value: "Learned on your Mac. Never leaves your device.",
             comment: "Description under the Smart Add toggle in General settings"
         )
 

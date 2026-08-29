@@ -61,6 +61,10 @@ struct AppStringsTests {
         // Settings
         #expect(!AppStrings.Settings.general.isEmpty)
         #expect(!AppStrings.Settings.loginRequiresApproval.isEmpty)
+        #expect(AppStrings.Settings.addingTiles == "Adding Tiles")
+
+        // Smart Add
+        #expect(AppStrings.SmartAdd.settingsToggleTitle == "Suggest tiles from my apps")
 
         // Tooltips
         #expect(!AppStrings.Tooltip.openSettings.isEmpty)

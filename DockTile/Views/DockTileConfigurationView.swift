@@ -123,6 +123,9 @@ struct DockTileConfigurationView: View {
         .onReceive(NotificationCenter.default.publisher(for: .openSettingsPane)) { note in
             selection = .settings((note.object as? SettingsPane) ?? .general)
         }
+        .onReceive(NotificationCenter.default.publisher(for: .addTileRequested)) { _ in
+            handleAddTapped()
+        }
         // Non-destructive prompt raised by the launch scan when tiles reference uninstalled apps.
         // "Keep" just dismisses — the rows stay flagged inline so the user can act later.
         .alert(
