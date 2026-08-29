@@ -141,6 +141,13 @@ struct DockTileDetailView: View {
         .paneTitleBand(editedConfig.name)
         // Toolbar with dynamic action button
         .toolbar {
+            // `.toolbar(removing: .title)` (DockTileConfigurationView) drops the toolbar's
+            // automatic flexible space, so `.primaryAction` items collapse leftward next to the
+            // `.navigation`-placed title (PaneTitleBand) instead of trailing the band. Push it
+            // back to the trailing edge explicitly.
+            if #available(macOS 26.0, *) {
+                ToolbarSpacer(.flexible)
+            }
             ToolbarItem(placement: .primaryAction) {
                 Button(action: handleDockAction) {
                     if isProcessing {

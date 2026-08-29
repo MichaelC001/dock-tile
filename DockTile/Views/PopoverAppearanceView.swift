@@ -118,6 +118,13 @@ struct PopoverAppearanceView: View {
         .background(NSColorBackgroundView.windowBackground)
         .paneTitleBand(AppStrings.Settings.popover, icon: .popover)
         .toolbar {
+            // `.toolbar(removing: .title)` (DockTileConfigurationView) drops the toolbar's
+            // automatic flexible space, so `.primaryAction` items collapse leftward next to the
+            // `.navigation`-placed title (PaneTitleBand) instead of trailing the band. Push it
+            // back to the trailing edge explicitly — see DockTileDetailView for the same fix.
+            if #available(macOS 26.0, *) {
+                ToolbarSpacer(.flexible)
+            }
             // HIG: window-level actions live in the toolbar. Reset is the secondary (plain bordered)
             // button; Save is the primary (accent-tinted, prominent) action on the trailing edge.
             ToolbarItemGroup(placement: .primaryAction) {
