@@ -244,7 +244,8 @@ def header(title, trailing="", leading=""):
     return f'<div class="hdr">{leading}<span class="title">{title}</span><div style="flex:1"></div>{trailing}</div>'
 
 def pane_header(tint, icon_svg, title, trailing=""):
-    return header(title, trailing, leading=squircle_icon(tint, icon_svg, 26))
+    # 2026-08-30: no icon in the title band on any pane (removed from the canvas by Karthik).
+    return header(title, trailing)
 
 def window(sidebar_html, content_html, overlay=""):
     return f'<div class="stage"><div class="win">{sidebar_html}<div class="content">{content_html}</div>{overlay}</div></div>'
@@ -593,7 +594,7 @@ canvas = {
     "artboards": artboards,
     "annotations": [
         {"id": "surface", "x": 0, "y": -290, "w": 760, "page": "light",
-         "text": "Surface: Klack's one-tone window + grouped white cards, native macOS sizing everywhere else — 13pt sidebar rows, 24pt icons, 40pt form rows, 12pt card radius, system blue, SF Pro. The page header lives in the 52pt title band. Tile pages carry no header icon; Settings and About keep their squircle, as Klack does. Customise Tile stays as it is in the app today and is not on this canvas."},
+         "text": "Surface: Klack's one-tone window + grouped white cards, native macOS sizing everywhere else — 13pt sidebar rows, 24pt icons, 40pt form rows, 12pt card radius, system blue, SF Pro. The page header lives in the 52pt title band and carries no icon on any pane. Customise Tile stays as it is in the app today and is not on this canvas."},
         note("gaps-main", 0, 0, "Gap fixes visible here: the app list is the live popover preview and the editor (hover → remove badge, drag to reorder); a FOLDER item and a MISSING app render the way the real popover draws them; Layout moved to the section header as Grid/List; delete is the header trash (the old bottom card was mislabelled 'Remove from Dock')."),
         note("draft", 2, 0, "New Tile draft: grey + placeholder icon until the user picks one; sidebar + is disabled while an unedited draft is selected (canCreateNewTile). Action reads 'Add to Dock' because a draft is visible-but-unpinned."),
         note("empty", 3, 0, "Zero tiles: one entry point, Add a Tile… — it opens the dialog, whose blank-first row is the New Tile path. The sidebar + stays enabled."),

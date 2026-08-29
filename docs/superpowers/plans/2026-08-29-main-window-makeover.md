@@ -544,6 +544,32 @@ git commit -m "feat(general): Adding Tiles card with Add a Tile row; Software Up
 
 ---
 
+### Task 5b: Title band carries no icon (decision 2026-08-30)
+
+**Files:**
+- Modify: `DockTile/Views/DockTileConfigurationView.swift` (`PaneTitleBand` / `paneTitleItem` / both `paneTitleBand` overloads)
+- Modify: call sites `GeneralSettingsView.swift`, `PopoverAppearanceView.swift`, `DockLockSettingsView.swift`
+
+**Interfaces:**
+- Produces: `.paneTitleBand(_ title: String)` and `.paneTitleBand(_ title: String) { trailing }` — the `icon:` parameter is removed. `PaneIcon` stays (the sidebar rows use `.systemName` / `.tint`); `PaneIcon.about` stays for Task 7's sidebar row.
+
+- [ ] **Step 1: Remove the icon from the band**
+
+In `paneTitleItem` drop the `SettingsBadgeIcon` branch and the `icon` parameter; drop `icon` from both modifiers and both `paneTitleBand` overloads. Update every call site to `.paneTitleBand(AppStrings.Settings.general)`, `.paneTitleBand(AppStrings.Settings.popover) { … }`, `.paneTitleBand(AppStrings.Settings.dockLock)`. Tile Detail and Customise already pass no icon.
+
+- [ ] **Step 2: Build, tests, capture**
+
+Build; the filtered test command (398 green); `Scripts/dev-capture.sh task5b-general --row "General"` and `--row "Popover"` — the band shows the title text only, actions still trailing.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add DockTile/Views
+git commit -m "feat(window): title band shows the title only — no pane icon" -m "Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+```
+
+---
+
 ### Task 6: Extract `PopoverPreviewCanvas`
 
 **Files:**
@@ -875,7 +901,7 @@ struct AboutPaneView: View {
                     }
         }
         .formStyle(.grouped)
-        .paneTitleBand(AppStrings.About.title, icon: .about)
+        .paneTitleBand(AppStrings.About.title)
     }
 
     /// The product in context: the user's first three tiles (or the defaults) on a Dock strip.
@@ -1546,7 +1572,7 @@ Paste the capture list and the checklist result into the PR description (or `doc
 
 - [ ] **Step 1: architecture.md**
 
-Replace the "Sidebar Selection & Empty State" first paragraph's bullets with the v2 facts: static sections **Tiles · Settings (General, Popover, Dock Lock) · Dock Tile (About)**; `.tilesPlaceholder` unchanged; the empty state's single **Add a Tile…** opens the dialog; the `+` gate seam unchanged. Add under "Tile Detail action button": *the button lives in the title band (`ToolbarItemGroup(.primaryAction)` next to the trash); install actions are `.borderedProminent`*. Add a new section:
+Replace the "Sidebar Selection & Empty State" first paragraph's bullets with the v2 facts (title band = title text only, no pane icon): static sections **Tiles · Settings (General, Popover, Dock Lock) · Dock Tile (About)**; `.tilesPlaceholder` unchanged; the empty state's single **Add a Tile…** opens the dialog; the `+` gate seam unchanged. Add under "Tile Detail action button": *the button lives in the title band (`ToolbarItemGroup(.primaryAction)` next to the trash); install actions are `.borderedProminent`*. Add a new section:
 ```markdown
 ## Tile editor = the real popover (critical)
 

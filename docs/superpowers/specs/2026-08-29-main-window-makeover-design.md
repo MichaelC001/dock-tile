@@ -30,7 +30,7 @@ zero-tile and draft states, Popover controls), add an **About** pane, and ship *
 | 4 | New-tile draft icon | Grey squircle with a **plus** placeholder (replaces grey `star.fill`) until the user picks an icon |
 | 5 | Add a Tile dialog | **"B — blank first"**: title + close only; a prominent *Create New Tile* row on top; "or start from what you use"; suggestion cards with plain *Use This Tile* buttons; member-app icons kept (4 + "+N") |
 | 6 | Add-flow rule | **Every Add/New entry point opens the dialog** — sidebar `+`, General's *Add a Tile…* row, the zero-tiles button — even when there is nothing to suggest (the dialog then shows the blank row + a "No suggestions yet" note). ⌘N *New Dock Tile* stays the direct blank shortcut (assumption — see §10) |
-| 7 | Header icons | Tile pages: **no** icon in the title band (the hero icon sits right below). Settings + About panes keep the 26pt squircle (Klack pattern) |
+| 7 | Header icons | **No icon in the title band on any pane** — title text only (Karthik removed the pane squircles from the canvas, 2026-08-30). `PaneIcon` stays as the sidebar-row icon definition |
 | 8 | Title band | 16pt semibold title; 52pt band; header actions live in the band |
 | 9 | Sidebar | Native 13pt rows, 24pt icons, static section headers (no Show/Hide accordion). Sections: **Tiles · Settings · Dock Tile** |
 | 10 | Software Update | Lives **only on About** (removed from General) |
@@ -43,7 +43,7 @@ zero-tile and draft states, Popover controls), add an **About** pane, and ship *
 ### 3.1 Window
 - Fixed width **768pt** (unchanged); min height 500. `NavigationSplitView` stays (sidebar 240 ideal).
 - **Chrome:** transparent unified title bar, no window title, no sidebar-toggle item, hidden toolbar
-  background. The 52pt title band becomes the page header: leading title (+ squircle on Settings/About),
+  background. The 52pt title band becomes the page header: leading title only (no icon),
   trailing actions. Sidebar column's band holds the traffic lights and the `+` (a real toolbar item,
   labelled "Add a Tile", ⌘-accessible).
 - **Implementation approach (spike first):** keep SwiftUI's toolbar and place the header as toolbar
@@ -141,7 +141,7 @@ Sidebar (`SidebarSelection`):
 - Removed: Software Update row; the Popover/Appearance drill-down.
 
 ### 5.5 Settings — Popover (canvas: *Settings — Popover*)
-- Title band: squircle + "Popover" · Reset (icon-only, tooltip "Reset to Defaults") · **Save** (prominent,
+- Title band: "Popover" · Reset (icon-only, tooltip "Reset to Defaults") · **Save** (prominent,
   ⌘S). Same enable/disable and "Applying…" spinner rules as today.
 - Body: preview canvas (real panels, sample apps) · "Configure — Each layout is saved independently"
   + **Grid | List** panel switcher · card with the six controls (*Popover Size · Tile Size · Animation ·
@@ -155,7 +155,7 @@ Sidebar (`SidebarSelection`):
   Permission row (Continue / Open System Settings…), single-display note, and the primer sheet unchanged.
 
 ### 5.7 About (canvas: *About*) — new
-- Title band: squircle (info) + "About".
+- Title band: "About".
 - Hero: preview canvas with a Dock strip carrying three tiles and a folder (the product in context).
 - Card: *Dock Tile / Version X.Y.Z* → **Check for Updates…** (Sparkle) · *Website* → docktile.rkarthik.co.
 - Card: "Found a bug or have an idea?" + caption → **Send Feedback…** · **Copy Diagnostics** (the
@@ -185,7 +185,7 @@ Dock Lock conditional rows, login approval row, provenance banner, no-suggestion
 |---|---|
 | `DockTileConfigurationView` | Window chrome; `SettingsPane` + `.popover`, `.about`; `handleAddTapped` always presents the sheet; empty state gets one action |
 | `DockTileSidebarView` | Static headers; third section "Dock Tile"; `+` as a labelled toolbar item in the band; draft rows use the plus placeholder |
-| New `PaneHeader` / band items | Title (+ optional squircle) and trailing actions for every pane |
+| New `PaneHeader` / band items | Title (no icon) and trailing actions for every pane |
 | `DockTileDetailView` | Header actions (trash + action button), hero card, In This Tile header (segmented + Add), `PopoverPreviewCanvas` with editing enabled; **delete** `NativeAppsTableView`, `AppItemDropDelegate` moves to the preview editor; remove the bottom delete card |
 | `StackPopoverView` / `ListPopoverView` | Optional `editing: EditingHandlers?` (onRemove, reorder binding, focus/Delete, context menu); nil in helpers — behaviour there unchanged. Edit mode hides the gear / utility rows |
 | New `PopoverPreviewCanvas` | Extracted from `PopoverAppearanceView`'s hero; used by Tile Detail, Popover, About |
