@@ -500,13 +500,29 @@ final class HelperBundleManager {
             // Wait for Dock to fully restart and plist to update
             try await waitForTileRemoval(bundleId: config.bundleIdentifier)
 
-            // Final verification (should always succeed now)
             if findInDock(bundleId: config.bundleIdentifier) == nil {
                 print("   ✓ Verified tile removed from Dock")
                 DiagnosticsLog.shared.log("dock", "Removed '\(config.name)' from Dock (verified)")
             } else {
-                print("   ⚠️ Tile still in Dock after restart - this shouldn't happen")
-                DiagnosticsLog.shared.log("dock", "'\(config.name)' STILL in Dock after restart — removal did not take")
+                // The entry came back: a Dock still holding the OLD persistent-apps in memory
+                // flushed it over our write when `killall` signalled it (measured — repeated
+                // plain removals left entries stranded, and this is the 'STILL in Dock after
+                // restart' line from the July 2026 report). Re-remove with the Dock actually
+                // gone, so there is no process left to flush stale prefs on top of us.
+                print("   ⚠️ Tile reappeared after restart (Dock flushed stale prefs) — retrying")
+                DiagnosticsLog.shared.log("dock", "'\(config.name)' reappeared in Dock after restart — retrying removal with the Dock quit")
+
+                quitDockAndWaitForExit()
+                removeFromDockPlist(bundleId: config.bundleIdentifier)
+                try await waitForTileRemoval(bundleId: config.bundleIdentifier)
+
+                if findInDock(bundleId: config.bundleIdentifier) == nil {
+                    print("   ✓ Verified tile removed from Dock (on retry)")
+                    DiagnosticsLog.shared.log("dock", "Removed '\(config.name)' from Dock (verified on retry)")
+                } else {
+                    print("   ⚠️ Tile still in Dock after retry")
+                    DiagnosticsLog.shared.log("dock", "'\(config.name)' STILL in Dock after retry — removal did not take")
+                }
             }
         } else {
             print("   ✓ No Dock plist entry to remove — Dock not restarted")
@@ -1227,6 +1243,30 @@ final class HelperBundleManager {
         // display, and the clamp only prevents drift — it doesn't relocate. Posted on the main
         // actor (this type is @MainActor); the handler no-ops unless the Dock actually drifted.
         NotificationCenter.default.post(name: .dockDidRestart, object: nil)
+    }
+
+    /// Quit the Dock and block until the process has actually exited, then let launchd bring it
+    /// back (the same lifecycle `restartDock()` relies on).
+    ///
+    /// WHY (critical): `killall Dock` only *signals* the Dock. A Dock that still holds the previous
+    /// `persistent-apps` in memory writes that stale list back to cfprefsd as it shuts down, which
+    /// can silently undo a removal we just wrote — the "STILL in Dock after restart" line. Writing
+    /// only after the process is gone leaves nothing behind to flush on top of us. Measured on
+    /// 2026-08-29: plain write-then-`killall` removals stranded 7 entries that a single
+    /// quit-then-write pass cleaned up. Used only on the retry path, so the common case is
+    /// unchanged.
+    private func quitDockAndWaitForExit(timeout: TimeInterval = 3) {
+        restartDock()  // posts .dockDidRestart for Dock Lock
+
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.dock").isEmpty {
+                print("   ✓ Dock process exited")
+                return
+            }
+            usleep(10_000)  // 10ms
+        }
+        print("   ⚠️ Dock still running after \(timeout)s — proceeding anyway")
     }
 
     /// Wait for Dock to fully restart and plist to update after tile removal
