@@ -13,6 +13,7 @@ enum SettingsPane: Hashable, CaseIterable {
     case general
     case popover     // v2: top-level pane (was a drill-down inside General)
     case dockLock
+    case about
 }
 
 /// What the sidebar currently has selected — either a tile or an inline Settings pane.
@@ -207,6 +208,9 @@ struct DockTileConfigurationView: View {
                 .environmentObject(configManager)
         case .dockLock:
             DockLockSettingsView()
+        case .about:
+            AboutPaneView()
+                .environmentObject(configManager)
         }
     }
 

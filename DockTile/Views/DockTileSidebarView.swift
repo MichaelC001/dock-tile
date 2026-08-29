@@ -64,6 +64,11 @@ struct DockTileSidebarView: View {
                 )
                 .tag(SidebarSelection.settings(.dockLock))
             }
+
+            Section(AppStrings.Sidebar.dockTileSection) {
+                SettingsRow(title: AppStrings.About.title, systemName: PaneIcon.about.systemName, tint: PaneIcon.about.tint)
+                    .tag(SidebarSelection.settings(.about))
+            }
         }
         // `.sidebar` style gives the collapsible "Show/Hide" section headers (the Apple
         // Notes-style accordion) and the tile-row selection highlight.

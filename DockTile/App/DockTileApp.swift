@@ -23,8 +23,6 @@ struct DockTileApp: App {
     private let windowWidth: CGFloat = 768
     private let minWindowHeight: CGFloat = 500
 
-    private let aboutWindowController = AboutWindowController()
-
     var body: some Scene {
         // `Window` (not `WindowGroup`) — the configuration UI is a single, unique window.
         // WindowGroup let every Dock-icon click / `docktile://configure` deep link spawn a
@@ -78,14 +76,12 @@ struct DockTileApp: App {
                 .keyboardShortcut(",", modifiers: .command)
             }
             CommandGroup(replacing: .appInfo) {
-                Button("About Dock Tile") {
+                Button(AppStrings.Menu.aboutDockTile) {
                     DiagnosticsLog.shared.ui("Menu → About Dock Tile")
-                    aboutWindowController.showAbout {
-                        updateController.checkForUpdates()
-                    }
+                    NotificationCenter.default.post(name: .openSettingsPane, object: SettingsPane.about)
                 }
                 Divider()
-                Button("Check for Updates...") {
+                Button(AppStrings.Button.checkForUpdates) {
                     DiagnosticsLog.shared.ui("Menu → Check for Updates")
                     updateController.checkForUpdates()
                 }

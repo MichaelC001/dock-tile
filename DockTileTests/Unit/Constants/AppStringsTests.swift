@@ -23,6 +23,20 @@ struct AppStringsTests {
         // App name
         #expect(!AppStrings.appName.isEmpty)
 
+        // About
+        #expect(!AppStrings.About.title.isEmpty)
+        #expect(!AppStrings.About.version("1.0").isEmpty)
+        #expect(!AppStrings.About.website.isEmpty)
+        #expect(!AppStrings.About.feedbackTitle.isEmpty)
+        #expect(!AppStrings.About.feedbackBody.isEmpty)
+        #expect(!AppStrings.About.sendFeedback.isEmpty)
+        #expect(!AppStrings.About.alsoFrom.isEmpty)
+        #expect(!AppStrings.About.studioTitle.isEmpty)
+        #expect(!AppStrings.About.studioSubtitle.isEmpty)
+        #expect(!AppStrings.About.spadesTitle.isEmpty)
+        #expect(!AppStrings.About.spadesSubtitle.isEmpty)
+        #expect(!AppStrings.About.learnMore.isEmpty)
+
         // Alert messages
         #expect(!AppStrings.Alert.restartDockTitle.isEmpty)
         #expect(!AppStrings.Alert.restartDockMessage.isEmpty)
@@ -35,6 +49,7 @@ struct AppStringsTests {
         #expect(!AppStrings.Button.back.isEmpty)
         #expect(!AppStrings.Button.cancel.isEmpty)
         #expect(AppStrings.Button.checkNow == "Check Now")
+        #expect(!AppStrings.Button.checkForUpdates.isEmpty)
         #expect(!AppStrings.Button.confirm.isEmpty)
         #expect(!AppStrings.Button.customise.isEmpty)
         #expect(!AppStrings.Button.delete.isEmpty)
@@ -81,6 +96,7 @@ struct AppStringsTests {
         #expect(!AppStrings.Menu.newTile.isEmpty)
         #expect(!AppStrings.Menu.openInFinder.isEmpty)
         #expect(!AppStrings.Menu.options.isEmpty)
+        #expect(!AppStrings.Menu.aboutDockTile.isEmpty)
 
         // Navigation
         #expect(!AppStrings.Navigation.customiseTile.isEmpty)

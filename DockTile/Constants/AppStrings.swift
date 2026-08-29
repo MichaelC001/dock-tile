@@ -23,6 +23,23 @@ enum AppStrings {
         comment: "App display name"
     )
 
+    // MARK: - About
+
+    enum About {
+        static let title = NSLocalizedString("about.title", value: "About", comment: "About pane title")
+        static func version(_ v: String) -> String { String(format: NSLocalizedString("about.version", value: "Version %@", comment: "About: version line"), v) }
+        static let website = NSLocalizedString("about.website", value: "Website", comment: "About: website row label")
+        static let feedbackTitle = NSLocalizedString("about.feedbackTitle", value: "Found a bug or have an idea?", comment: "About: feedback card title")
+        static let feedbackBody = NSLocalizedString("about.feedbackBody", value: "Feedback goes straight to the developer. Diagnostics attach a log of what the app and its tiles did — nothing personal.", comment: "About: feedback card body")
+        static let sendFeedback = NSLocalizedString("about.sendFeedback", value: "Send Feedback…", comment: "About: opens the feedback email")
+        static let alsoFrom = NSLocalizedString("about.alsoFrom", value: "Also from Happy Machines", comment: "About: studio section header")
+        static let studioTitle = NSLocalizedString("about.studioTitle", value: "Made by Happy Machines Company", comment: "About: studio row title")
+        static let studioSubtitle = NSLocalizedString("about.studioSubtitle", value: "A tiny product studio building nifty Mac apps that each fix one thing well.", comment: "About: studio row subtitle")
+        static let spadesTitle = NSLocalizedString("about.spadesTitle", value: "Spades Audio", comment: "About: sibling product row title")
+        static let spadesSubtitle = NSLocalizedString("about.spadesSubtitle", value: "Per-app volume, EQ and output control for your Mac, from the menu bar.", comment: "About: sibling product subtitle")
+        static let learnMore = NSLocalizedString("about.learnMore", value: "Learn More…", comment: "About: opens spadesaudio.com")
+    }
+
     // MARK: - Alert Messages
 
     enum Alert {
@@ -792,6 +809,12 @@ enum AppStrings {
             "menu.configureTile",
             value: "Configure Tile",
             comment: "Tooltip for gear icon in popover"
+        )
+
+        static let aboutDockTile = NSLocalizedString(
+            "menu.aboutDockTile",
+            value: "About Dock Tile",
+            comment: "App menu"
         )
     }
 

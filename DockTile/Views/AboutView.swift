@@ -2,103 +2,135 @@
 //  AboutView.swift
 //  DockTile
 //
-//  Custom About window with "Check for Updates" button
+//  The About pane (v2): lives in the sidebar under "Dock Tile" — the only home of Software Update.
+//  Swift 6 - Strict Concurrency
 //
 
 import SwiftUI
 
-struct AboutView: View {
-    let onCheckForUpdates: () -> Void
-
-    private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0"
+/// Links the pane opens. `feedback` comes from Info.plist `DTFeedbackEmail` (mailto:) when set,
+/// otherwise the website — never a hard-coded address.
+enum AboutLinks {
+    static let website = URL(string: "https://docktile.rkarthik.co")!
+    static let studio  = URL(string: "https://happymachines.company/")!
+    static let spades  = URL(string: "https://spadesaudio.com/")!
+    static var feedback: URL {
+        if let email = Bundle.main.object(forInfoDictionaryKey: "DTFeedbackEmail") as? String,
+           !email.isEmpty, let url = URL(string: "mailto:\(email)?subject=Dock%20Tile%20feedback") {
+            return url
+        }
+        return website
     }
+}
 
-    private var buildNumber: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
-    }
+struct AboutPaneView: View {
+    @EnvironmentObject private var configManager: ConfigurationManager
+    @EnvironmentObject private var updateController: UpdateController
 
     private var copyright: String {
         Bundle.main.object(forInfoDictionaryKey: "NSHumanReadableCopyright") as? String ?? ""
     }
 
+    // One grouped Form (a Form is List-backed and will not size itself inside a ScrollView): the hero
+    // rides as a full-bleed, clear-background first row.
     var body: some View {
-        VStack(spacing: 12) {
-            // App icon
-            if let appIcon = NSApp.applicationIconImage {
-                Image(nsImage: appIcon)
-                    .resizable()
-                    .frame(width: 96, height: 96)
-            }
-
-            // App name
-            Text("Dock Tile")
-                .font(.system(size: 18, weight: .semibold))
-
-            // Version
-            Text("Version \(appVersion) (\(buildNumber))")
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-
-            // Copyright
-            Text(copyright)
-                .font(.system(size: 10))
-                .foregroundStyle(.tertiary)
-
-            Divider()
-                .padding(.horizontal, 20)
-
-            // Check for Updates button
-            Button("Check for Updates...") {
-                onCheckForUpdates()
-            }
-            .buttonStyle(.link)
-            .font(.system(size: 12))
-
-            // Website link
-            Link("docktile.rkarthik.co", destination: URL(string: "https://docktile.rkarthik.co")!)
-                .font(.system(size: 11))
+        Form {
+                    Section {
+                        hero
+                            .listRowInsets(EdgeInsets())
+                            .listRowBackground(Color.clear)
+                    }
+                    Section {
+                        LabeledContent {
+                            Button(AppStrings.Button.checkForUpdates) {
+                                DiagnosticsLog.shared.ui("About → Check for Updates")
+                                updateController.checkForUpdates()
+                            }
+                            .disabled(!updateController.canCheckForUpdates)
+                        } label: {
+                            Text(AppStrings.appName)
+                            Text(AppStrings.About.version(AppEnvironment.appVersion))
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        LabeledContent(AppStrings.About.website) {
+                            Link("docktile.rkarthik.co", destination: AboutLinks.website)
+                        }
+                    }
+                    Section {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(AppStrings.About.feedbackTitle)
+                            Text(AppStrings.About.feedbackBody).font(.caption).foregroundStyle(.secondary)
+                        }
+                        HStack(spacing: 8) {
+                            Button {
+                                DiagnosticsLog.shared.ui("About → Send Feedback")
+                                NSWorkspace.shared.open(AboutLinks.feedback)
+                            } label: { Label(AppStrings.About.sendFeedback, systemImage: "envelope") }
+                            .frame(maxWidth: .infinity)
+                            Button {
+                                DiagnosticsLog.shared.ui("About → Copy Diagnostics")
+                                DiagnosticsLog.shared.copyToPasteboard()
+                            } label: { Label(AppStrings.Menu.copyDiagnostics, systemImage: "doc.text") }
+                            .frame(maxWidth: .infinity)
+                        }
+                    }
+                    Section {
+                        studioRow(icon: "face.smiling", tint: .orange, title: AppStrings.About.studioTitle,
+                                  subtitle: AppStrings.About.studioSubtitle) {
+                            Link("happymachines.company", destination: AboutLinks.studio)
+                        }
+                        studioRow(icon: "suit.spade.fill", tint: .black, title: AppStrings.About.spadesTitle,
+                                  subtitle: AppStrings.About.spadesSubtitle) {
+                            Button(AppStrings.About.learnMore) { NSWorkspace.shared.open(AboutLinks.spades) }
+                        }
+                    } header: {
+                        Text(AppStrings.About.alsoFrom)
+                    } footer: {
+                        Text(copyright)
+                            .font(.caption).foregroundStyle(.tertiary)
+                            .frame(maxWidth: .infinity)
+                    }
         }
-        .padding(.top, 20)
-        .padding(.bottom, 16)
-        .padding(.horizontal, 40)
-        .frame(width: 300)
+        .formStyle(.grouped)
+        .paneTitleBand(AppStrings.About.title)
     }
-}
 
-// MARK: - About Window Controller
-
-@MainActor
-final class AboutWindowController {
-    private var window: NSWindow?
-
-    func showAbout(onCheckForUpdates: @escaping () -> Void) {
-        // If window exists, just bring it to front
-        if let window = window, window.isVisible {
-            window.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
-            return
+    /// The product in context: the user's first three tiles (or the defaults) on a Dock strip.
+    private var hero: some View {
+        let tiles = Array(configManager.configurations.prefix(3))
+        return HStack(spacing: 10) {
+            if tiles.isEmpty {
+                ForEach([TintColor.blue, .purple, .pink], id: \.self) { tint in
+                    DockTileIconPreview(tintColor: tint, iconType: .sfSymbol, iconValue: "folder.fill",
+                                        iconScale: ConfigurationDefaults.iconScale,
+                                        iconWeight: ConfigurationDefaults.iconWeight, size: 48)
+                }
+            } else {
+                ForEach(tiles) { DockTileIconPreview.fromConfig($0, size: 48) }
+            }
+            Divider().frame(height: 40)
+            Image(nsImage: NSWorkspace.shared.icon(for: .folder)).resizable().frame(width: 48, height: 48)
         }
+        .padding(.horizontal, 12).padding(.vertical, 8)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 24)
+        .background(StudioCanvasBackgroundView())
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
 
-        let aboutView = AboutView(onCheckForUpdates: onCheckForUpdates)
-        let hostingView = NSHostingView(rootView: aboutView)
-        hostingView.setFrameSize(hostingView.fittingSize)
-
-        let window = NSWindow(
-            contentRect: NSRect(origin: .zero, size: hostingView.fittingSize),
-            styleMask: [.titled, .closable],
-            backing: .buffered,
-            defer: false
-        )
-        window.contentView = hostingView
-        window.title = "About Dock Tile"
-        window.titlebarAppearsTransparent = true
-        window.titleVisibility = .hidden
-        window.isReleasedWhenClosed = false
-        window.center()
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
-
-        self.window = window
+    private func studioRow<Trailing: View>(icon: String, tint: Color, title: String, subtitle: String,
+                                           @ViewBuilder trailing: () -> Trailing) -> some View {
+        LabeledContent {
+            trailing()
+        } label: {
+            HStack(spacing: 12) {
+                SettingsBadgeIcon(systemName: icon, tint: tint, size: 28)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                    Text(subtitle).font(.caption).foregroundStyle(.secondary)
+                }
+            }
+        }
     }
 }

@@ -2376,6 +2376,318 @@
           }
         }
       }
+    },
+    "about.title": {
+      "comment": "About pane title",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About"
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About"
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About"
+          }
+        }
+      }
+    },
+    "about.version": {
+      "comment": "About: version line",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version %@"
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version %@"
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version %@"
+          }
+        }
+      }
+    },
+    "about.website": {
+      "comment": "About: website row label",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Website"
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Website"
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Website"
+          }
+        }
+      }
+    },
+    "about.feedbackTitle": {
+      "comment": "About: feedback card title",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Found a bug or have an idea?"
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Found a bug or have an idea?"
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Found a bug or have an idea?"
+          }
+        }
+      }
+    },
+    "about.feedbackBody": {
+      "comment": "About: feedback card body",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feedback goes straight to the developer. Diagnostics attach a log of what the app and its tiles did — nothing personal."
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feedback goes straight to the developer. Diagnostics attach a log of what the app and its tiles did — nothing personal."
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feedback goes straight to the developer. Diagnostics attach a log of what the app and its tiles did — nothing personal."
+          }
+        }
+      }
+    },
+    "about.sendFeedback": {
+      "comment": "About: opens the feedback email",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send Feedback…"
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send Feedback…"
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send Feedback…"
+          }
+        }
+      }
+    },
+    "about.alsoFrom": {
+      "comment": "About: studio section header",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Also from Happy Machines"
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Also from Happy Machines"
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Also from Happy Machines"
+          }
+        }
+      }
+    },
+    "about.studioTitle": {
+      "comment": "About: studio row title",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Made by Happy Machines Company"
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Made by Happy Machines Company"
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Made by Happy Machines Company"
+          }
+        }
+      }
+    },
+    "about.studioSubtitle": {
+      "comment": "About: studio row subtitle",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A tiny product studio building nifty Mac apps that each fix one thing well."
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A tiny product studio building nifty Mac apps that each fix one thing well."
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A tiny product studio building nifty Mac apps that each fix one thing well."
+          }
+        }
+      }
+    },
+    "about.spadesTitle": {
+      "comment": "About: sibling product row title",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spades Audio"
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spades Audio"
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spades Audio"
+          }
+        }
+      }
+    },
+    "about.spadesSubtitle": {
+      "comment": "About: sibling product subtitle",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per-app volume, EQ and output control for your Mac, from the menu bar."
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per-app volume, EQ and output control for your Mac, from the menu bar."
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per-app volume, EQ and output control for your Mac, from the menu bar."
+          }
+        }
+      }
+    },
+    "about.learnMore": {
+      "comment": "About: opens spadesaudio.com",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Learn More…"
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Learn More…"
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Learn More…"
+          }
+        }
+      }
+    },
+    "menu.aboutDockTile": {
+      "comment": "App menu",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About Dock Tile"
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About Dock Tile"
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About Dock Tile"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
