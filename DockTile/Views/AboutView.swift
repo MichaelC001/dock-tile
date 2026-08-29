@@ -117,6 +117,8 @@ struct AboutPaneView: View {
         .padding(.vertical, 24)
         .background(StudioCanvasBackgroundView())
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(AppStrings.appName)
     }
 
     private func studioRow<Trailing: View>(icon: String, tint: Color, title: String, subtitle: String,
