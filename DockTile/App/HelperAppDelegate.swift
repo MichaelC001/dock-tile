@@ -126,6 +126,11 @@ final class HelperAppDelegate: NSObject, NSApplicationDelegate {
             DiagnosticsLog.shared.log("helper", "No configuration found for bundle \(currentBundleId)")
         }
 
+        // Runaway-CPU evidence: the July 2026 "AI Tile at 82.9 % for 16 h" report left no stack
+        // (no hang reporting for helpers, 1 h log retention). If this process pegs a core, it now
+        // samples itself into <support>/spins/ and Copy Diagnostics carries the hottest frames.
+        SpinWatchdog.shared.start()
+
         // Set up icon style observation for dynamic icon switching
         // NOTE: This observes "Icon and widget style" setting, NOT "Appearance" (Light/Dark)
         setupIconStyleObservation()

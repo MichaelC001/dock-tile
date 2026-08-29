@@ -56,3 +56,24 @@ and re-throws. Returns the body's value unchanged — wrapping never alters beha
   `project.pbxproj` entry; editing it does not). New `DockTileTests/` files auto-join the target.
 
 See also [[project_diagnostics_expansion]] for the base feature's history.
+
+## Spin watchdog (helpers)
+
+`SpinWatchdog.shared.start()` runs in every helper (`HelperAppDelegate.applicationDidFinishLaunching`)
+on its own `DispatchSourceTimer` queue — **not** a run-loop `Timer`, so it keeps ticking while the
+main thread is wedged. Every 30 s it compares process CPU time
+(`clock_gettime_nsec_np(CLOCK_PROCESS_CPUTIME_ID)`) to wall time; ≥50 % of a core for 3 consecutive
+windows (pure seam `SpinWatchdogPolicy.step`, guarded by `SpinWatchdogTests`) runs
+`/usr/bin/sample <pid> 3` into `<support>/spins/<ISO stamp>-<bundle id>.txt` — **once per process** —
+logs `[watchdog]` non-verbose, and records a Crashlytics non-fatal (`spin_watchdog`) so prevalence is
+visible without a user report. Each tick also round-trips a block through the main queue, so the log
+line says whether main was responsive (spinning in AppKit vs in a worker — the most useful bit when
+reading the capture). `report()` lists captures and inlines the newest file's `Sort by top of stack`
+block (`DiagnosticsLog.spinExcerpt`, pure); `prepareOnLaunch()` keeps the 5 newest (main app prunes,
+helpers never do).
+
+**Why it exists**: the July 2026 "AI Tile at 82.9 % CPU, 16 h CPU time, 2 idle wake-ups" report had
+no stack to act on — helper bundles get no macOS hang reporting, Crashlytics doesn't capture spins,
+and the 1-hour log window had already trimmed the incident (the Update that ended it force-killed the
+process before the retained window). `sample` on an own-user, ad-hoc-signed helper needs no root and
+no TCC grant (verified from a launchd-spawned context).

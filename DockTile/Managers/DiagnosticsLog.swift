@@ -59,6 +59,26 @@ final class DiagnosticsLog: @unchecked Sendable {
     /// One shared file per environment (dev vs release have separate support folders).
     private let fileURL = AppEnvironment.supportURL.appendingPathComponent("diagnostics.log")
 
+    /// Where helper spin watchdogs drop `/usr/bin/sample` captures (one per process lifetime).
+    static let spinsDirectory = AppEnvironment.supportURL.appendingPathComponent("spins")
+
+    /// Pure: the `Sort by top of stack` block of a `sample` report — the frames the process spent
+    /// the most time in — without the long `Binary Images` tail. Empty when the marker is absent.
+    nonisolated static func spinExcerpt(from sampleText: String) -> String {
+        let lines = sampleText.components(separatedBy: "\n")
+        guard let start = lines.firstIndex(where: { $0.hasPrefix("Sort by top of stack") }) else { return "" }
+        let end = lines[start...].firstIndex(where: { $0.hasPrefix("Binary Images") }) ?? lines.endIndex
+        return lines[start..<end].joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Newest-first spin capture files (empty when none). Names start with an ISO stamp, so a
+    /// reverse lexicographic sort is a reverse chronological sort.
+    private func spinCaptureFiles() -> [URL] {
+        ((try? FileManager.default.contentsOfDirectory(at: Self.spinsDirectory, includingPropertiesForKeys: nil)) ?? [])
+            .filter { $0.pathExtension == "txt" }
+            .sorted { $0.lastPathComponent > $1.lastPathComponent }
+    }
+
     private let logger = Logger(subsystem: "com.docktile.diagnostics", category: "app")
 
     /// Signpost interval emitter for `measure(_:)`. Shows workflow spans in Instruments'
@@ -204,6 +224,11 @@ final class DiagnosticsLog: @unchecked Sendable {
         }
         let rebuilt = kept.isEmpty ? "" : kept.joined(separator: "\n") + "\n"
         try? rebuilt.write(to: fileURL, atomically: true, encoding: .utf8)
+
+        // Keep only the 5 newest spin captures. Main app only — helpers never prune shared files.
+        for stale in spinCaptureFiles().dropFirst(5) {
+            try? FileManager.default.removeItem(at: stale)
+        }
     }
 
     /// The last hour of lines from the shared file (all processes), chronological.
@@ -238,6 +263,20 @@ final class DiagnosticsLog: @unchecked Sendable {
             String(repeating: "—", count: 56)
         ]
         out.append(events.isEmpty ? "(no diagnostic events recorded in the last hour)" : events.joined(separator: "\n"))
+
+        // Spin captures are the one piece of evidence a runaway helper leaves behind; list them and
+        // inline the hottest frames of the newest so the pasted report alone can name the loop.
+        let spins = spinCaptureFiles()
+        if !spins.isEmpty {
+            out.append("")
+            out.append("Spin captures (\(spins.count), newest first — full files in \(Self.spinsDirectory.path)):")
+            for file in spins.prefix(5) { out.append("  \(file.lastPathComponent)") }
+            if let newest = spins.first, let text = try? String(contentsOf: newest, encoding: .utf8) {
+                out.append("")
+                out.append("Hottest frames in \(newest.lastPathComponent):")
+                out.append(Self.spinExcerpt(from: text))
+            }
+        }
         return out.joined(separator: "\n")
     }
 
@@ -249,5 +288,149 @@ final class DiagnosticsLog: @unchecked Sendable {
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
         log("diagnostics", "Copied diagnostics report to clipboard (\(text.count) chars)")
+    }
+}
+
+// MARK: - Spin watchdog (helpers)
+
+/// Pure decision seam for the helper CPU watchdog (regression-guard convention — mirrors
+/// `DiagnosticsLog.shouldRecord`). Plain values in, decision out; no clocks, no files.
+enum SpinWatchdogPolicy {
+    /// Fraction of one core the process must sustain for a window to count as "hot".
+    static let hotUtilization: Double = 0.5
+    /// Consecutive hot windows before a capture fires (3 × 30 s = 90 s — a popover-open burst
+    /// lasts well under a second; the July 2026 incident ran at 83 % for 16 h).
+    static let hotWindowsRequired = 3
+    /// Window length in seconds.
+    static let interval: TimeInterval = 30
+
+    /// CPU-seconds consumed per wall-second — 1.0 = one core fully busy.
+    nonisolated static func utilization(cpuDeltaNs: UInt64, wallDeltaNs: UInt64) -> Double {
+        guard wallDeltaNs > 0 else { return 0 }
+        return Double(cpuDeltaNs) / Double(wallDeltaNs)
+    }
+
+    /// Advance the hot-window streak and decide whether to capture now. A capture fires once per
+    /// process lifetime (`hasCaptured`) — one `sample` file is the evidence; more is noise.
+    nonisolated static func step(utilization: Double, consecutiveHot: Int, hasCaptured: Bool)
+        -> (consecutiveHot: Int, capture: Bool) {
+        let hot = utilization >= hotUtilization
+        let streak = hot ? consecutiveHot + 1 : 0
+        return (streak, hot && !hasCaptured && streak >= hotWindowsRequired)
+    }
+}
+
+/// Recorded as a Crashlytics non-fatal when the watchdog fires, so prevalence across users is
+/// visible even when nobody sends a diagnostics report.
+enum SpinWatchdogError: Error {
+    case sustainedCPU
+}
+
+/// Helper-only CPU watchdog. Ticks on its OWN background queue (a `DispatchSourceTimer`, not a
+/// run-loop `Timer`), so it keeps ticking while the main thread is hung or spinning. When the
+/// process sustains `SpinWatchdogPolicy.hotUtilization` of a core for `hotWindowsRequired`
+/// windows it runs `/usr/bin/sample` on itself into `DiagnosticsLog.spinsDirectory` and logs it —
+/// the stack the July 2026 "AI Tile at 82.9 % CPU for 16 h" report never had.
+///
+/// `sample` on an own-user, ad-hoc-signed helper needs no root and no TCC grant (verified from a
+/// launchd-spawned context on 2026-08-29).
+final class SpinWatchdog: @unchecked Sendable {
+    static let shared = SpinWatchdog()
+
+    private let queue = DispatchQueue(label: "com.docktile.spin-watchdog", qos: .utility)
+    private var timer: DispatchSourceTimer?
+    private var lastCPU: UInt64 = 0
+    private var lastWall: UInt64 = 0
+    private var consecutiveHot = 0
+    private var hasCaptured = false
+    /// Set by a block dispatched to the main queue each tick; still false next tick ⇒ main hung.
+    private var mainThreadPong = true
+    private var sampler: Process?
+
+    private init() {}
+
+    /// Begin watching. Idempotent. All state is confined to `queue`.
+    func start() {
+        queue.async { [self] in
+            guard timer == nil else { return }
+            lastCPU = Self.processCPUNs()
+            lastWall = DispatchTime.now().uptimeNanoseconds
+            let source = DispatchSource.makeTimerSource(queue: queue)
+            source.schedule(deadline: .now() + SpinWatchdogPolicy.interval,
+                            repeating: SpinWatchdogPolicy.interval)
+            source.setEventHandler { [weak self] in self?.tick() }
+            timer = source
+            source.resume()
+        }
+    }
+
+    /// Total CPU time (all threads) this process has consumed — what Activity Monitor's % CPU is
+    /// derived from.
+    private static func processCPUNs() -> UInt64 {
+        clock_gettime_nsec_np(CLOCK_PROCESS_CPUTIME_ID)
+    }
+
+    private func tick() {
+        let cpu = Self.processCPUNs()
+        let wall = DispatchTime.now().uptimeNanoseconds
+        let utilization = SpinWatchdogPolicy.utilization(cpuDeltaNs: cpu &- lastCPU,
+                                                         wallDeltaNs: wall &- lastWall)
+        lastCPU = cpu
+        lastWall = wall
+
+        // Round-trip a block through the main queue: if the previous one never came back, the main
+        // thread is wedged — which distinguishes "spinning in a background worker" from "spinning
+        // in AppKit/SwiftUI on main", the single most useful bit for reading the capture.
+        let mainResponsive = mainThreadPong
+        mainThreadPong = false
+        DispatchQueue.main.async { [weak self] in
+            self?.queue.async { self?.mainThreadPong = true }
+        }
+
+        let decision = SpinWatchdogPolicy.step(utilization: utilization,
+                                               consecutiveHot: consecutiveHot,
+                                               hasCaptured: hasCaptured)
+        consecutiveHot = decision.consecutiveHot
+        guard decision.capture else { return }
+        hasCaptured = true
+
+        let hotSeconds = Int(Double(consecutiveHot) * SpinWatchdogPolicy.interval)
+        let percent = Int((utilization * 100).rounded())
+        DiagnosticsLog.shared.log("watchdog",
+            "Sustained CPU \(percent)% of a core for \(hotSeconds)s " +
+            "(main thread \(mainResponsive ? "responsive" : "NOT responding")) — capturing sample")
+        Task { @MainActor in
+            AnalyticsService.shared.record(SpinWatchdogError.sustainedCPU,
+                                           context: "spin_watchdog",
+                                           keys: ["cpu_percent": String(percent),
+                                                  "main_thread_responsive": String(mainResponsive)])
+        }
+        captureSample()
+    }
+
+    private func captureSample() {
+        let dir = DiagnosticsLog.spinsDirectory
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
+        let file = dir.appendingPathComponent("\(stamp)-\(Bundle.main.bundleIdentifier ?? "helper").txt")
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/sample")
+        process.arguments = [String(ProcessInfo.processInfo.processIdentifier), "3", "-file", file.path]
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        process.terminationHandler = { [weak self] finished in
+            DiagnosticsLog.shared.log("watchdog", finished.terminationStatus == 0
+                ? "Spin sample written: \(file.lastPathComponent) (File → Copy Diagnostics includes it)"
+                : "sample exited \(finished.terminationStatus) — no spin capture")
+            self?.queue.async { self?.sampler = nil }
+        }
+        sampler = process
+        do {
+            try process.run()
+        } catch {
+            DiagnosticsLog.shared.log("watchdog", "Could not launch sample: \(error.localizedDescription)")
+            sampler = nil
+        }
     }
 }
