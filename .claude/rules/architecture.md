@@ -74,6 +74,17 @@ All Dock plist operations use `CFPreferencesCopyAppValue`/`CFPreferencesSetAppVa
 
 Race condition prevention: `installingBundleIds` and `removingBundleIds` Sets prevent double operations.
 
+**The dying Dock can undo your write (critical)**: `killall Dock` only *signals* the Dock — a Dock
+still holding the previous `persistent-apps` in memory flushes that stale list back to cfprefsd as it
+exits, silently reverting the add or removal just written (this is the `'<tile>' STILL in Dock after
+restart` line, and the "had to press hide twice" symptom). Distinct from the stale-*read* problem the
+synchronize-first reads defend against. So every Dock mutation must **verify** afterwards rather than
+assume it stuck: `installHelper` re-adds + restarts if `findInDock` misses, and `removeFromDock(for:)`
+retries via `quitDockAndWaitForExit()` — re-writing with the Dock process actually gone, so nothing
+is left alive to flush over us. Measured 2026-08-29: plain write-then-`killall` stranded 7 entries
+under concurrent restarts while a single quit-then-write pass cleared them; on a settled Dock the
+plain path succeeded 12/12, so it stays the fast path and quit-and-wait is the retry only.
+
 **Restart the Dock only when it actually changed (critical)**: every removal path is gated on
 real work happening — `removeFromDock(for:)` no-ops (no plist write, no restart, no wait) when the
 tile has no Dock entry and no running helper (`shouldPerformDockRemoval` seam), and both it and
