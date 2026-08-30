@@ -2928,6 +2928,30 @@
           }
         }
       }
+    },
+    "smartAdd.settingsToggleDescriptionV2": {
+      "comment": "General: Smart Add toggle description",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Learned on your Mac. Never leaves your device."
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Learned on your Mac. Never leaves your device."
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Learned on your Mac. Never leaves your device."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

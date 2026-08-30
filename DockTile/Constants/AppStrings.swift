@@ -919,7 +919,7 @@ enum AppStrings {
         )
 
         static let settingsToggleDescription = NSLocalizedString(
-            "smartAdd.privacyFootnote",
+            "smartAdd.settingsToggleDescriptionV2",
             value: "Learned on your Mac. Never leaves your device.",
             comment: "Description under the Smart Add toggle in General settings"
         )
