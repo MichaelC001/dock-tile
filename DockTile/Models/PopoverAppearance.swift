@@ -310,6 +310,11 @@ enum PopoverPanelLayout {
     /// with no apps would otherwise be a single 82pt column — a sliver the empty state's two lines
     /// wrap to shreds inside.
     static let gridEmptyMinWidth: CGFloat = 260
+    /// Floor for a populated grid panel. The header reserves a 28pt gutter on each side (the gear
+    /// and its balancing spacer), so a one-app tile's single column left the title ~26pt and it
+    /// wrapped onto a second line. Two columns (210pt) already clear this, so only the one-app case
+    /// is widened.
+    static let gridMinWidth: CGFloat = 180
     /// The real popover scrolls past this; the editor does not (Tile Detail scrolls instead).
     static let gridScrollCap: CGFloat = 600
     /// Label line under a grid cell when Show Labels is on: a 4pt gap + one 14pt line.
@@ -359,7 +364,7 @@ enum PopoverPanelLayout {
             + CGFloat(rows) * itemHeight
             + CGFloat(rows - 1) * metrics.gap
             + gridPadding * 2
-        return CGSize(width: width, height: height)
+        return CGSize(width: max(width, gridMinWidth), height: height)
     }
 
     /// A list panel's intrinsic size. The width is what `ListPopoverView` pins; the height is the

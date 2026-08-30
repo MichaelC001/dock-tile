@@ -375,10 +375,18 @@ struct StackPopoverView: View {
 
                 Spacer()
 
+                // ALWAYS one line. The header reserves a 28pt gutter on each side (the gear and its
+                // balancing spacer), so a narrow panel — a one-app tile is a single column — left so
+                // little room that "New Tile" wrapped to two lines and pushed the grid down.
+                // `PopoverPanelLayout.gridMinWidth` keeps normal names from truncating; this is the
+                // guarantee for the ones that still don't fit.
                 Text(tileName)
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .help(tileName)
 
                 Spacer()
 
@@ -725,6 +733,10 @@ struct ListPopoverView: View {
                 Text(tileName)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.primary)
+                    // One line here too — `listHeaderHeight` bills for exactly one, so a wrap would
+                    // also push the panel past the height the canvas frames it to.
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 12)
                     // Changing this changes `PopoverPanelLayout.listHeaderHeight` — the canvas

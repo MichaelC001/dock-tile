@@ -42,6 +42,24 @@ struct PopoverPreviewCanvasTests {
         #expect(size == CGSize(width: 240, height: 264))
     }
 
+    @Test("A one-app grid is widened so its title fits on one line")
+    func naturalGridPanelSizeSingleApp() {
+        let size = PopoverPreviewCanvas.naturalPanelSize(
+            layout: .grid, appCount: 1, settings: .default, includesUtilityRows: false)
+        // Raw width is one 82pt cell + 32pt padding = 114, of which the header's two 28pt gutters
+        // leave ~26pt for the tile name — enough to wrap "New Tile" onto a second line. Floored at
+        // 180. Height is unchanged: 36 header + one 78pt row + 32 padding.
+        #expect(size == CGSize(width: 180, height: 146))
+    }
+
+    @Test("Two apps already clear the floor, so their width is untouched")
+    func naturalGridPanelSizeTwoApps() {
+        let size = PopoverPreviewCanvas.naturalPanelSize(
+            layout: .grid, appCount: 2, settings: .default, includesUtilityRows: false)
+        // 2 cols x 82 + 1 x 14 gap + 32 padding = 210, above the 180 floor.
+        #expect(size == CGSize(width: 210, height: 146))
+    }
+
     @Test("Empty grid gets a readable width, not a one-column sliver")
     func naturalGridPanelSizeEmpty() {
         let size = PopoverPreviewCanvas.naturalPanelSize(
