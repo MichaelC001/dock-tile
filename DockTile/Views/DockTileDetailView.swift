@@ -432,11 +432,17 @@ struct DockTileDetailView: View {
     // MARK: - In This Tile Section
 
     /// Re-render key for the embedded panel: the panel reads settings/icons itself, so it must be
-    /// rebuilt when the layout, the icon style, the app list or the missing-app set changes.
+    /// rebuilt when the layout or the icon style changes.
+    ///
+    /// The **app list is deliberately excluded**. `configuration` is a value type, so adding,
+    /// removing or reordering items already re-renders the panel without a new view identity — while
+    /// keying on it would destroy and rebuild the panel mid-edit, resetting its `@State`: an
+    /// in-flight drag loses `draggedItem` after the first hop (every later `dropEntered` early-returns,
+    /// so the item lands one cell over instead of where it was released), and a Delete-key removal
+    /// drops keyboard focus. `missingAppIDs` is excluded for the same reason, plus a `Set`'s
+    /// iteration order is not stable — each cell resolves its own install status in its body.
     private var previewSignature: String {
-        ([editedConfig.layoutMode.rawValue, iconStyleManager.currentStyle.rawValue]
-         + editedConfig.appItems.map { $0.id.uuidString }
-         + configManager.missingAppIDs.map { $0.uuidString }).joined(separator: "-")
+        [editedConfig.layoutMode.rawValue, iconStyleManager.currentStyle.rawValue].joined(separator: "-")
     }
 
     /// The tile's apps, shown as the REAL popover panel (WYSIWYG — `settings: nil` makes it load the

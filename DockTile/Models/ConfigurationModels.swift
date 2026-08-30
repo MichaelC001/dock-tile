@@ -547,7 +547,7 @@ struct AppItem: Identifiable, Codable, Hashable {
 // MARK: - App list editing (pure seam behind the Tile Detail preview editor)
 
 /// Plain-value reducer for the editable popover preview. Mirrors the semantics of the old table's
-/// `AppItemDropDelegate.dropEntered` (drag forward → after target, backward → before target).
+/// `PopoverItemDropDelegate.dropEntered` (drag forward → after target, backward → before target).
 enum AppListEditor {
     nonisolated static func removing(_ id: UUID, from items: [AppItem]) -> [AppItem] {
         items.filter { $0.id != id }
