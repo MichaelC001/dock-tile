@@ -546,9 +546,14 @@ struct StackAppItem: View {
         // Reference iconStyleManager.currentStyle to trigger re-render when icon style changes
         let _ = iconStyleManager.currentStyle
 
+        // Resolved ONCE per cell: the probe hits Launch Services + stat() and is uncached, and the
+        // icon and the "Not installed" caption both need the answer. Computed exactly where the
+        // icon's own (unconditional, both-modes) probe already was, so helpers do no extra work.
+        let isMissing = AppInstallChecker.resolve(app).status == .missing
+
         VStack(spacing: 4) {
             // App icon, sized by the global Tile Size setting.
-            appIconView
+            appIconView(isMissing: isMissing)
                 .frame(width: iconSize, height: iconSize)
 
             if showLabel {
@@ -563,7 +568,7 @@ struct StackAppItem: View {
 
             // The editor names the "app is gone" state outright; the shipped popover keeps to the
             // dimmed placeholder icon.
-            if editing != nil, AppInstallChecker.resolve(app).status == .missing {
+            if editing != nil, isMissing {
                 Text(AppStrings.Label.notInstalled)
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
@@ -599,10 +604,10 @@ struct StackAppItem: View {
     }
 
     @ViewBuilder
-    private var appIconView: some View {
+    private func appIconView(isMissing: Bool) -> some View {
         // Resolved synchronously (no @State/onAppear) so a deleted app never flashes its stale
         // cached icon before the placeholder appears.
-        if AppInstallChecker.resolve(app).status == .missing {
+        if isMissing {
             Image(systemName: "questionmark.app.dashed")
                 .font(.system(size: iconSize * 0.5))
                 .foregroundStyle(.secondary)
@@ -841,9 +846,13 @@ struct ListAppRow: View {
         // Reference iconStyleManager.currentStyle to trigger re-render when icon style changes
         let _ = iconStyleManager.currentStyle
 
+        // Resolved ONCE per row — see StackAppItem: the probe is uncached (Launch Services +
+        // stat()) and both the icon and the "Not installed" caption need it.
+        let isMissing = AppInstallChecker.resolve(app).status == .missing
+
         HStack(spacing: metrics.rowSpacing) {
             // Icon, sized by the global Tile Size setting.
-            appIconView
+            appIconView(isMissing: isMissing)
                 .frame(width: metrics.iconSize, height: metrics.iconSize)
 
             // White text on the accent keyboard-selection; normal text on the subtle hover fill.
@@ -856,7 +865,7 @@ struct ListAppRow: View {
 
             // The editor names the "app is gone" state outright; the shipped popover keeps to the
             // dimmed placeholder icon.
-            if editing != nil, AppInstallChecker.resolve(app).status == .missing {
+            if editing != nil, isMissing {
                 Text(AppStrings.Label.notInstalled)
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
@@ -888,9 +897,9 @@ struct ListAppRow: View {
     }
 
     @ViewBuilder
-    private var appIconView: some View {
+    private func appIconView(isMissing: Bool) -> some View {
         // Resolved synchronously so a deleted app shows the placeholder, not its stale icon.
-        if AppInstallChecker.resolve(app).status == .missing {
+        if isMissing {
             Image(systemName: "questionmark.app.dashed")
                 .font(.system(size: metrics.iconSize * 0.75))
                 .foregroundStyle(.secondary)
