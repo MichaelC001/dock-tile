@@ -357,13 +357,18 @@ enum PopoverPanelLayout {
 
     /// A list panel's intrinsic size. The width is what `ListPopoverView` pins; the height is the
     /// estimate the canvas must not undershoot.
+    ///
+    /// `hasHeader` mirrors `ListPopoverView`'s `if !tileName.isEmpty` — a tile whose name has been
+    /// cleared draws no title row, and billing for one leaves a visible gap under the panel.
     nonisolated static func listPanelSize(
         metrics: PopoverListMetrics,
         appCount: Int,
-        includesUtilityRows: Bool
+        includesUtilityRows: Bool,
+        hasHeader: Bool
     ) -> CGSize {
+        let header = hasHeader ? listHeaderHeight : 0
         guard appCount > 0 else {
-            let height = listHeaderHeight
+            let height = header
                 + listEmptyStatePadding * 2
                 + listEmptyStateTextHeight
                 + listOuterVerticalPadding * 2
@@ -373,7 +378,7 @@ enum PopoverPanelLayout {
             listRowMinHeight,
             max(metrics.iconSize, metrics.fontSize + 3) + metrics.rowVerticalPadding * 2
         )
-        let height = listHeaderHeight
+        let height = header
             + CGFloat(appCount) * rowHeight
             + (includesUtilityRows ? listUtilityRowsHeight : 0)
             + listOuterVerticalPadding * 2

@@ -50,6 +50,30 @@ struct PopoverPreviewCanvasTests {
         #expect(size == CGSize(width: 240, height: 110))
     }
 
+    @Test("A cleared tile name drops the title row from the estimate, not just from the panel")
+    func naturalListPanelSizeWithoutHeader() {
+        // `ListPopoverView` renders its title row only `if !tileName.isEmpty`. Billing for a row the
+        // panel never draws leaves a gap under it inside the canvas.
+        let named = PopoverPreviewCanvas.naturalPanelSize(
+            layout: .list, appCount: 6, settings: .default, includesUtilityRows: false,
+            hasHeader: true)
+        let unnamed = PopoverPreviewCanvas.naturalPanelSize(
+            layout: .list, appCount: 6, settings: .default, includesUtilityRows: false,
+            hasHeader: false)
+        #expect(named == CGSize(width: 240, height: 264))
+        // 264 - the 32pt header row.
+        #expect(unnamed == CGSize(width: 240, height: 232))
+    }
+
+    @Test("An unnamed empty list loses the header row too")
+    func naturalListPanelSizeEmptyWithoutHeader() {
+        let size = PopoverPreviewCanvas.naturalPanelSize(
+            layout: .list, appCount: 0, settings: .default, includesUtilityRows: false,
+            hasHeader: false)
+        // 110 - the 32pt header row.
+        #expect(size == CGSize(width: 240, height: 78))
+    }
+
     @Test("A panel wider than the detail column scales DOWN to fit flush")
     func naturalScaleShrinksOverflowingPanel() {
         let s = PopoverPreviewCanvas.naturalScale(availableWidth: 488, panelWidth: 498)

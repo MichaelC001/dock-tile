@@ -544,7 +544,9 @@ struct PopoverPreviewCanvas: View {
             layout: layout,
             appCount: configuration.appItems.count,
             settings: settings ?? PopoverSettings.load(layout: layout),
-            includesUtilityRows: layout == .list && editing == nil
+            includesUtilityRows: layout == .list && editing == nil,
+            // Mirrors `ListPopoverView.tileName` — a cleared name draws no title row.
+            hasHeader: !configuration.name.isEmpty
         )
         return GeometryReader { proxy in
             let scale = Self.naturalScale(availableWidth: proxy.size.width, panelWidth: panelSize.width)
@@ -557,6 +559,10 @@ struct PopoverPreviewCanvas: View {
         }
         .frame(height: naturalHeight ?? (panelSize.height + Self.naturalInset * 2))
         .onPreferenceChange(NaturalCanvasHeightKey.self) { naturalHeight = $0 }
+        // Drop the cached height when the layout flips: it was measured for the OTHER panel, and the
+        // container would wear that stale height for a frame before the preference re-published.
+        // The `??` fallback above is already computed from the current layout, so nil is correct.
+        .onChange(of: layout) { naturalHeight = nil }
     }
 
     /// Scale that fits `panelWidth` (plus the canvas inset on both sides) into `availableWidth`,
@@ -576,7 +582,8 @@ struct PopoverPreviewCanvas: View {
         layout: LayoutMode,
         appCount: Int,
         settings: PopoverSettings,
-        includesUtilityRows: Bool
+        includesUtilityRows: Bool,
+        hasHeader: Bool = true
     ) -> CGSize {
         switch layout {
         case .grid:
@@ -597,7 +604,8 @@ struct PopoverPreviewCanvas: View {
                                              tileSize: settings.tileSize,
                                              spacing: settings.spacing),
                 appCount: appCount,
-                includesUtilityRows: includesUtilityRows
+                includesUtilityRows: includesUtilityRows,
+                hasHeader: hasHeader
             )
         }
     }
