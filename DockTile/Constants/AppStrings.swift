@@ -373,6 +373,12 @@ enum AppStrings {
             comment: "Badge/kind text shown for an app whose bundle is no longer on disk"
         )
 
+        static let editorHint = NSLocalizedString(
+            "label.editorHint",
+            value: "Hover to remove · Drag to reorder",
+            comment: "Tile Detail: apps section caption"
+        )
+
         static let missingAppsScan = NSLocalizedString(
             "label.missingAppsScan",
             value: "Missing Apps",
@@ -875,6 +881,12 @@ enum AppStrings {
             value: "Selected Items",
             comment: "Section header for selected items"
         )
+
+        static let inThisTile = NSLocalizedString(
+            "section.inThisTile",
+            value: "In This Tile",
+            comment: "Tile Detail: apps section header"
+        )
     }
 
     // MARK: - Smart Add
@@ -1026,6 +1038,12 @@ enum AppStrings {
             "tooltip.openSettings",
             value: "Settings",
             comment: "Tooltip for the settings toolbar button"
+        )
+
+        static let deleteTile = NSLocalizedString(
+            "tooltip.deleteTile",
+            value: "Delete Tile",
+            comment: "Tile Detail: trash button tooltip"
         )
     }
 

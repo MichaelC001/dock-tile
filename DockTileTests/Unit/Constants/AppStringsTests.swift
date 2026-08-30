@@ -107,6 +107,8 @@ struct AppStringsTests {
 
         // Sections
         #expect(!AppStrings.Section.selectedItems.isEmpty)
+        #expect(!AppStrings.Section.inThisTile.isEmpty)
+        #expect(!AppStrings.Label.editorHint.isEmpty)
 
         // Subtitles
         #expect(!AppStrings.Subtitle.chooseColour.isEmpty)
@@ -127,6 +129,7 @@ struct AppStringsTests {
         // Tooltips
         #expect(!AppStrings.Tooltip.createNewTile.isEmpty)
         #expect(!AppStrings.Tooltip.editFirst.isEmpty)
+        #expect(!AppStrings.Tooltip.deleteTile.isEmpty)
 
         // Empty states
         #expect(!AppStrings.Empty.createFirstTile.isEmpty)

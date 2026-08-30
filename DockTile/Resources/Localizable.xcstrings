@@ -2736,6 +2736,78 @@
           }
         }
       }
+    },
+    "section.inThisTile": {
+      "comment": "Tile Detail: apps section header",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In This Tile"
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In This Tile"
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In This Tile"
+          }
+        }
+      }
+    },
+    "label.editorHint": {
+      "comment": "Tile Detail: apps section caption",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hover to remove · Drag to reorder"
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hover to remove · Drag to reorder"
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hover to remove · Drag to reorder"
+          }
+        }
+      }
+    },
+    "tooltip.deleteTile": {
+      "comment": "Tile Detail: trash button tooltip",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Tile"
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Tile"
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Tile"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
