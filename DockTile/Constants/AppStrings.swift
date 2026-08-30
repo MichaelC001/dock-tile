@@ -379,6 +379,12 @@ enum AppStrings {
             comment: "Tile Detail: apps section caption"
         )
 
+        static let addAppsTooltip = NSLocalizedString(
+            "label.addAppsTooltip",
+            value: "Add apps or folders to this tile",
+            comment: "Tooltip on the + Add button above the tile editor's popover preview."
+        )
+
         static let missingAppsScan = NSLocalizedString(
             "label.missingAppsScan",
             value: "Missing Apps",
@@ -913,13 +919,13 @@ enum AppStrings {
         )
 
         static let settingsToggleTitle = NSLocalizedString(
-            "smartAdd.settingsToggleTitleV2",
+            "smartAdd.settings.toggleTitle",
             value: "Suggest tiles from my apps",
             comment: "Title of the Smart Add on/off toggle in General settings"
         )
 
         static let settingsToggleDescription = NSLocalizedString(
-            "smartAdd.settingsToggleDescriptionV2",
+            "smartAdd.settings.toggleDescription",
             value: "Learned on your Mac. Never leaves your device.",
             comment: "Description under the Smart Add toggle in General settings"
         )

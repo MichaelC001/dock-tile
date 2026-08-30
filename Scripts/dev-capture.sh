@@ -80,7 +80,12 @@ fi
 restore_dark() { osascript -e "tell application \"System Events\" to tell appearance preferences to set dark mode to $1" >/dev/null; }
 WAS_DARK=$(osascript -e 'tell application "System Events" to tell appearance preferences to get dark mode')
 SUFFIX=""
-if [[ $DARK -eq 1 && "$WAS_DARK" == "false" ]]; then restore_dark true; SUFFIX="-dark"; sleep 1.2; fi
+# A trap, not just the explicit calls below: every failure between here and the capture — a dead
+# osascript, an unreadable window, a Ctrl-C — used to leave the user's Mac stuck in Dark Mode.
+if [[ $DARK -eq 1 && "$WAS_DARK" == "false" ]]; then
+  trap 'restore_dark false' EXIT INT TERM
+  restore_dark true; SUFFIX="-dark"; sleep 1.2
+fi
 POS=$(osascript -e "tell application \"System Events\"" -e "set p to first process whose unix id is $PID" -e "tell p to get {position, size} of window 1" -e "end tell" | tr -d ' ')
 X=${POS%%,*}; R=${POS#*,}; Y=${R%%,*}; R=${R#*,}; W=${R%%,*}; H=${R#*,}
 open -a "$APP"

@@ -461,7 +461,7 @@ struct DockTileDetailView: View {
                 }
                 .pickerStyle(.segmented).labelsHidden().fixedSize()
                 Button(action: addItem) { Label(AppStrings.Button.add, systemImage: "plus") }
-                    .help(AppStrings.FilePicker.message)
+                    .help(AppStrings.Label.addAppsTooltip)
             }
             .padding(.horizontal, 4)
 

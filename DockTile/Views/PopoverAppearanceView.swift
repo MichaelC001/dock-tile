@@ -568,9 +568,10 @@ struct PopoverPreviewCanvas: View {
         return min(1, usable / panelWidth)
     }
 
-    /// The panel's intrinsic layout size for the ACTUAL settings and app count — mirrors exactly how
-    /// `StackPopoverView` / `ListPopoverView` size themselves, through `PopoverMetrics` only (the
-    /// single sizing seam). Guarded by `PopoverPreviewCanvasTests`.
+    /// The panel's intrinsic layout size for the ACTUAL settings and app count — the SAME formulas
+    /// the real panels size themselves from (`PopoverPanelLayout`, which is also where
+    /// `StackPopoverView.calculateHeight` and `ListPopoverView`'s paddings read their constants), so
+    /// the canvas cannot undershoot the panel it frames. Guarded by `PopoverPreviewCanvasTests`.
     nonisolated static func naturalPanelSize(
         layout: LayoutMode,
         appCount: Int,
@@ -579,33 +580,25 @@ struct PopoverPreviewCanvas: View {
     ) -> CGSize {
         switch layout {
         case .grid:
-            let m = PopoverMetrics.grid(popoverSize: settings.popoverSize, tileSize: settings.tileSize,
-                                        spacing: settings.spacing, showLabels: settings.showLabels)
-            let cols = max(1, min(m.columns, max(1, appCount)))
-            let width = m.cellWidth * CGFloat(cols) + m.gap * CGFloat(cols - 1) + 32
-            guard appCount > 0 else { return CGSize(width: width, height: 180) }
-            let rows = Int(ceil(Double(appCount) / Double(cols)))
-            let itemHeight = m.iconSize + (settings.showLabels ? 18 : 0) + 4
-            let height = 36 + CGFloat(rows) * itemHeight + CGFloat(rows - 1) * m.gap + 32
-            return CGSize(width: width, height: height)
+            return PopoverPanelLayout.gridPanelSize(
+                metrics: PopoverMetrics.grid(popoverSize: settings.popoverSize,
+                                             tileSize: settings.tileSize,
+                                             spacing: settings.spacing,
+                                             showLabels: settings.showLabels),
+                appCount: appCount,
+                showLabels: settings.showLabels
+            )
         case .list:
-            let m = PopoverMetrics.list(popoverSize: settings.popoverSize, tileSize: settings.tileSize,
-                                        spacing: settings.spacing)
-            guard appCount > 0 else {
-                // `.natural` only ever renders with `editing != nil` (see `naturalFit`), so an empty
-                // tile shows `ListPopoverView`'s EDIT-mode empty state, not the helper-popover one:
-                // the 32pt title header (`ListPopoverView.body`, the `!tileName.isEmpty` block,
-                // :683-690) + `emptyStateView` (:757-765) — its 12pt `editingNoAppsYet` text wraps to
-                // 2 lines (30pt, measured at the default-tier 216pt text width) inside the view's own
-                // 16pt top/bottom padding (32pt) — + the panel's own 16pt outer
-                // `.padding(.vertical, 8)` (:738). 32 (header) + 32 (empty-state padding) + 30 (text)
-                // + 16 (outer padding) = 110.
-                return CGSize(width: m.width, height: 110)
-            }
-            let rowHeight = max(28, max(m.iconSize, m.fontSize + 3) + m.rowVerticalPadding * 2)
-            let utility: CGFloat = includesUtilityRows ? 51 : 0
-            let height = 32 + CGFloat(appCount) * rowHeight + utility + 16
-            return CGSize(width: m.width, height: height)
+            // `.natural` only ever renders with `editing != nil` (see `naturalFit`), so an empty tile
+            // shows `ListPopoverView`'s EDIT-mode empty state — the taller of the two — which is what
+            // `listPanelSize` bills for.
+            return PopoverPanelLayout.listPanelSize(
+                metrics: PopoverMetrics.list(popoverSize: settings.popoverSize,
+                                             tileSize: settings.tileSize,
+                                             spacing: settings.spacing),
+                appCount: appCount,
+                includesUtilityRows: includesUtilityRows
+            )
         }
     }
 

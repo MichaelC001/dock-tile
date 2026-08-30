@@ -60,18 +60,18 @@ struct DockTileConfigurationView: View {
 
     var body: some View {
         NavigationSplitView {
-            // Sidebar with tiles + inline Settings, accordion-style sections
+            // Sidebar: static Tiles / Settings / Dock Tile sections
             DockTileSidebarView(selection: $selection, onAdd: handleAddTapped)
                 .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 280)
-                .toolbar(removing: .sidebarToggle)
         } detail: {
             detailColumn
         }
         .navigationSplitViewStyle(.balanced)
         // v2 chrome: the 52pt title band IS the page header. No window title, no sidebar toggle,
         // no toolbar surface — each pane hosts its title + actions as toolbar items (PaneTitleBand).
+        // The toggle is removed once, on the sidebar's own `List` (DockTileSidebarView) — that is the
+        // placement proven to work; the copies here and on this column were redundant.
         .toolbar(removing: .title)
-        .toolbar(removing: .sidebarToggle)
         .toolbarBackground(.hidden, for: .windowToolbar)
         // Strict frame enforcement: fixed width, flexible height
         .frame(
@@ -409,8 +409,16 @@ private struct PaneTitleBandWithActions<Trailing: ToolbarContent>: ViewModifier 
             // `.toolbar(removing: .title)` (DockTileConfigurationView) drops the toolbar's automatic
             // flexible space, so trailing-placed items would otherwise collapse leftward next to the
             // title instead of trailing the band. Push them back to the trailing edge.
+            //
+            // `ToolbarSpacer` is macOS 26+. The pre-26 branch is the older idiom for the same job —
+            // a toolbar item that is nothing but a `Spacer`, which the AppKit toolbar renders as a
+            // flexible space. UNVERIFIED on real macOS 15 hardware (this machine is Tahoe): if it
+            // misbehaves there, the failure mode is cosmetic — the actions sit beside the title,
+            // which is exactly where they land with no spacer at all.
             if #available(macOS 26.0, *) {
                 ToolbarSpacer(.flexible)
+            } else {
+                ToolbarItem(placement: .automatic) { Spacer() }
             }
             trailing
         }

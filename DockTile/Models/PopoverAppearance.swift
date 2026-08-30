@@ -284,3 +284,99 @@ enum PopoverMetrics {
         }
     }
 }
+
+// MARK: - Panel geometry
+
+/// The popover panels' chrome geometry and size formulas — the single place either the real panel
+/// or the editor/preview canvas can be resized from.
+///
+/// **Why this is one seam (critical)**: `StackPopoverView` pins its own width AND height from these
+/// formulas, so a grid panel and the canvas around it can only disagree if two copies drift.
+/// `ListPopoverView` pins only its **width** and takes an intrinsic height, which makes the canvas's
+/// estimate load-bearing — an underestimate CLIPS the real panel, because the canvas frames it and
+/// clips to that frame. Both formulas did live in two places and did drift: the empty-list case
+/// reached the canvas billing one 36pt row while the panel rendered its ~110pt empty state, cutting
+/// off the tile-name header and the last line of the hint. Guarded by `PopoverPreviewCanvasTests`.
+enum PopoverPanelLayout {
+
+    // MARK: Grid chrome (`StackPopoverView`)
+
+    static let gridHeaderHeight: CGFloat = 36
+    /// Applied on all four sides of the grid content.
+    static let gridPadding: CGFloat = 16
+    /// Height of the grid's own "no apps" state.
+    static let gridEmptyHeight: CGFloat = 180
+    /// The real popover scrolls past this; the editor does not (Tile Detail scrolls instead).
+    static let gridScrollCap: CGFloat = 600
+    /// Label line under a grid cell when Show Labels is on: a 4pt gap + one 14pt line.
+    static let gridLabelHeight: CGFloat = 18
+    /// 2pt cell padding, top and bottom.
+    static let gridCellPadding: CGFloat = 4
+
+    // MARK: List chrome (`ListPopoverView`)
+
+    /// The tile-name header: one 13pt line inside `listHeaderVerticalPadding` top and bottom.
+    static let listHeaderHeight: CGFloat = 32
+    static let listHeaderVerticalPadding: CGFloat = 8
+    /// The panel's own padding above the first row and below the last.
+    static let listOuterVerticalPadding: CGFloat = 8
+    /// `emptyStateView`'s own vertical padding, top and bottom.
+    static let listEmptyStatePadding: CGFloat = 16
+    /// Two 12pt lines: the edit-mode "no apps yet" copy wraps at the default tier's text width.
+    static let listEmptyStateTextHeight: CGFloat = 30
+    /// The helper popover's two trailing utility rows (never shown in the editor).
+    static let listUtilityRowsHeight: CGFloat = 51
+    static let listRowMinHeight: CGFloat = 28
+
+    /// Columns actually drawn: the Popover Size tier capped at the app count, so a tile with fewer
+    /// apps than columns stays tight instead of padding out empty trailing columns.
+    nonisolated static func columnCount(metricsColumns: Int, appCount: Int) -> Int {
+        max(1, min(metricsColumns, max(1, appCount)))
+    }
+
+    /// A grid panel's intrinsic size, uncapped. `StackPopoverView` applies `gridScrollCap` to the
+    /// height outside the editor; the editor and the canvas use the full value.
+    nonisolated static func gridPanelSize(
+        metrics: PopoverGridMetrics,
+        appCount: Int,
+        showLabels: Bool
+    ) -> CGSize {
+        let cols = columnCount(metricsColumns: metrics.columns, appCount: appCount)
+        let width = metrics.cellWidth * CGFloat(cols)
+            + metrics.gap * CGFloat(cols - 1)
+            + gridPadding * 2
+        guard appCount > 0 else { return CGSize(width: width, height: gridEmptyHeight) }
+        let rows = Int(ceil(Double(appCount) / Double(cols)))
+        let itemHeight = metrics.iconSize + (showLabels ? gridLabelHeight : 0) + gridCellPadding
+        let height = gridHeaderHeight
+            + CGFloat(rows) * itemHeight
+            + CGFloat(rows - 1) * metrics.gap
+            + gridPadding * 2
+        return CGSize(width: width, height: height)
+    }
+
+    /// A list panel's intrinsic size. The width is what `ListPopoverView` pins; the height is the
+    /// estimate the canvas must not undershoot.
+    nonisolated static func listPanelSize(
+        metrics: PopoverListMetrics,
+        appCount: Int,
+        includesUtilityRows: Bool
+    ) -> CGSize {
+        guard appCount > 0 else {
+            let height = listHeaderHeight
+                + listEmptyStatePadding * 2
+                + listEmptyStateTextHeight
+                + listOuterVerticalPadding * 2
+            return CGSize(width: metrics.width, height: height)
+        }
+        let rowHeight = max(
+            listRowMinHeight,
+            max(metrics.iconSize, metrics.fontSize + 3) + metrics.rowVerticalPadding * 2
+        )
+        let height = listHeaderHeight
+            + CGFloat(appCount) * rowHeight
+            + (includesUtilityRows ? listUtilityRowsHeight : 0)
+            + listOuterVerticalPadding * 2
+        return CGSize(width: metrics.width, height: height)
+    }
+}

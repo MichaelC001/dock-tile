@@ -225,6 +225,11 @@ extension View {
                     dragged.wrappedValue = app
                     return NSItemProvider(object: app.id.uuidString as NSString)
                 }
+                // Only `performDrop` clears `dragged`, so a drag abandoned outside any cell leaves
+                // it set. That is deliberate rather than leaked state: drop callbacks fire only
+                // during an active drag session, and `onDrag` above reassigns `dragged` before the
+                // next session can deliver one — so a stale value is never read. Clearing it would
+                // need a container-level drop target that could swallow drops meant for a cell.
                 .onDrop(of: [.text], delegate: PopoverItemDropDelegate(
                     target: app,
                     dragged: { dragged.wrappedValue },
@@ -305,7 +310,7 @@ struct StackPopoverView: View {
     /// Column count from the global Popover Size (Small 4 / Medium 5 / Large 6), capped at the app
     /// count so a tile with few apps stays tight rather than padding out empty trailing columns.
     private var columnCount: Int {
-        max(1, min(metrics.columns, max(1, apps.count)))
+        PopoverPanelLayout.columnCount(metricsColumns: metrics.columns, appCount: apps.count)
     }
 
     /// Grid columns sized by Tile Size; spacing by Spacing.
@@ -315,14 +320,16 @@ struct StackPopoverView: View {
 
     /// Popover width from cell width × columns.
     private var popoverWidth: CGFloat {
-        metrics.cellWidth * CGFloat(columnCount) + metrics.gap * CGFloat(columnCount - 1) + gridHorizontalPadding * 2
+        PopoverPanelLayout.gridPanelSize(metrics: metrics, appCount: apps.count,
+                                         showLabels: settings.showLabels).width
     }
 
-    // Layout constants
-    private let headerHeight: CGFloat = 36
-    private let gridTopPadding: CGFloat = 16
-    private let gridBottomPadding: CGFloat = 16
-    private let gridHorizontalPadding: CGFloat = 16
+    // Layout constants — the panel's chrome geometry lives in `PopoverPanelLayout` so the editor
+    // canvas, which frames and clips this panel, can never size it from a stale second copy.
+    private let headerHeight = PopoverPanelLayout.gridHeaderHeight
+    private let gridTopPadding = PopoverPanelLayout.gridPadding
+    private let gridBottomPadding = PopoverPanelLayout.gridPadding
+    private let gridHorizontalPadding = PopoverPanelLayout.gridPadding
 
     var body: some View {
         VStack(spacing: 0) {
@@ -453,20 +460,12 @@ struct StackPopoverView: View {
     }
 
     private func calculateHeight() -> CGFloat {
-        guard !apps.isEmpty else { return 180 }
-
-        // Item height = icon + (label line, when shown) + cell padding. Rows spaced by Spacing.
-        let rows = ceil(Double(apps.count) / Double(columnCount))
-        let labelHeight: CGFloat = settings.showLabels ? 4 + 14 : 0
-        let itemHeight = metrics.iconSize + labelHeight + 4  // 2pt cell padding top+bottom
-        let gridContentHeight = CGFloat(rows) * itemHeight
-            + CGFloat(max(0, Int(rows) - 1)) * metrics.gap
-            + gridTopPadding + gridBottomPadding
-
-        // Total = header + grid content, capped at max. Edit mode has no inner ScrollView, so it
+        // Header + rows + padding, from the shared seam. Edit mode has no inner ScrollView, so it
         // reports its full height and lets Tile Detail's own scroll view do the scrolling.
-        let totalHeight = headerHeight + gridContentHeight
-        return editing != nil ? totalHeight : min(totalHeight, 600)
+        let totalHeight = PopoverPanelLayout.gridPanelSize(
+            metrics: metrics, appCount: apps.count, showLabels: settings.showLabels
+        ).height
+        return editing != nil ? totalHeight : min(totalHeight, PopoverPanelLayout.gridScrollCap)
     }
 
     // MARK: - Keyboard Navigation
@@ -686,7 +685,9 @@ struct ListPopoverView: View {
                     .foregroundStyle(.primary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
+                    // Changing this changes `PopoverPanelLayout.listHeaderHeight` — the canvas
+                    // clips this panel to a height it computes from that constant.
+                    .padding(.vertical, PopoverPanelLayout.listHeaderVerticalPadding)
             }
 
             // App list
@@ -735,7 +736,9 @@ struct ListPopoverView: View {
                 )
             }
         }
-        .padding(.vertical, 8)
+        // This panel pins only its WIDTH and takes an intrinsic height, so every vertical term here
+        // is mirrored in `PopoverPanelLayout.listPanelSize` for the canvas that frames it.
+        .padding(.vertical, PopoverPanelLayout.listOuterVerticalPadding)
         .frame(width: metrics.width)
         // LIQUID GLASS: Transparent SwiftUI background to allow NSVisualEffectView through
         .background(Color.clear)
@@ -762,7 +765,7 @@ struct ListPopoverView: View {
                 $0.multilineTextAlignment(.center).padding(.horizontal, 12)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
+            .padding(.vertical, PopoverPanelLayout.listEmptyStatePadding)
     }
 
     // MARK: - Keyboard Navigation
