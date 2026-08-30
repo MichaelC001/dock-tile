@@ -546,7 +546,11 @@ struct PopoverPreviewCanvas: View {
             settings: settings ?? PopoverSettings.load(layout: layout),
             includesUtilityRows: layout == .list && editing == nil,
             // Mirrors `ListPopoverView.tileName` — a cleared name draws no title row.
-            hasHeader: !configuration.name.isEmpty
+            hasHeader: !configuration.name.isEmpty,
+            // Mirrors `StackPopoverView.showsMissingCaption` — the editor's "Not installed"
+            // caption makes a grid row taller, and this canvas CLIPS what it frames.
+            includesMissingCaption: editing != nil && layout == .grid
+                && configuration.appItems.contains { AppInstallChecker.resolve($0).status == .missing }
         )
         return GeometryReader { proxy in
             let scale = Self.naturalScale(availableWidth: proxy.size.width, panelWidth: panelSize.width)
@@ -583,7 +587,8 @@ struct PopoverPreviewCanvas: View {
         appCount: Int,
         settings: PopoverSettings,
         includesUtilityRows: Bool,
-        hasHeader: Bool = true
+        hasHeader: Bool = true,
+        includesMissingCaption: Bool = false
     ) -> CGSize {
         switch layout {
         case .grid:
@@ -593,7 +598,8 @@ struct PopoverPreviewCanvas: View {
                                              spacing: settings.spacing,
                                              showLabels: settings.showLabels),
                 appCount: appCount,
-                showLabels: settings.showLabels
+                showLabels: settings.showLabels,
+                includesMissingCaption: includesMissingCaption
             )
         case .list:
             // `.natural` only ever renders with `editing != nil` (see `naturalFit`), so an empty tile
@@ -632,27 +638,39 @@ struct PopoverPreviewCanvas: View {
             .shadow(color: .black.opacity(fit == .natural ? 0.22 : 0), radius: 18, y: 8)
     }
 
-    /// Largest footprint over every tier — moved verbatim from PopoverAppearanceView.worstCasePanelSize,
-    /// parameterised on the app count.
+    /// Largest footprint over every tier, at the roomiest Tile Size / Spacing / Labels combination.
+    /// Only used to derive the Settings preview's fixed zoom, so control changes visibly spread and
+    /// tighten instead of re-filling the width.
+    ///
+    /// Goes through `PopoverPanelLayout` like every other size in this file. It used to re-implement
+    /// the geometry with its own literals and a different list-row formula — the exact drift the
+    /// seam exists to prevent, and the reason an empty list panel was once clipped.
     private static func worstCasePanelSize(for layout: LayoutMode, appCount count: Int) -> CGSize {
+        let apps = max(1, count)
         switch layout {
         case .grid:
-            var maxW: CGFloat = 1, maxH: CGFloat = 1
-            for size in PopoverSizeTier.allCases {
-                let m = PopoverMetrics.grid(popoverSize: size, tileSize: .large, spacing: .spacious, showLabels: true)
-                let cols = max(1, min(m.columns, max(1, count)))
-                let rows = max(1, Int(ceil(Double(max(1, count)) / Double(cols))))
-                let w = m.cellWidth * CGFloat(cols) + m.gap * CGFloat(cols - 1) + 32
-                let itemH = m.iconSize + 18 + 4
-                let h = 36 + CGFloat(rows) * itemH + CGFloat(rows - 1) * m.gap + 32
-                maxW = max(maxW, w); maxH = max(maxH, h)
+            // Column count varies per tier, so the widest/tallest tier isn't the same one — take
+            // the max of both axes across all of them.
+            return PopoverSizeTier.allCases.reduce(CGSize(width: 1, height: 1)) { worst, tier in
+                let size = PopoverPanelLayout.gridPanelSize(
+                    metrics: PopoverMetrics.grid(popoverSize: tier, tileSize: .large,
+                                                 spacing: .spacious, showLabels: true),
+                    appCount: apps,
+                    showLabels: true
+                )
+                return CGSize(width: max(worst.width, size.width),
+                              height: max(worst.height, size.height))
             }
-            return CGSize(width: maxW, height: maxH)
         case .list:
-            let m = PopoverMetrics.list(popoverSize: .large, tileSize: .large, spacing: .spacious)
-            let rowH = max(m.iconSize, m.fontSize) + m.rowVerticalPadding * 2 + 4
-            let h = 33 + CGFloat(max(1, count)) * rowH + 9 + 42 + 16
-            return CGSize(width: m.width, height: h)
+            // The list's width is fixed per tier and its height grows with the rows, so the
+            // roomiest tier IS the worst case. Utility rows included: this preview shows the panel
+            // exactly as it ships (`editing == nil`).
+            return PopoverPanelLayout.listPanelSize(
+                metrics: PopoverMetrics.list(popoverSize: .large, tileSize: .large, spacing: .spacious),
+                appCount: apps,
+                includesUtilityRows: true,
+                hasHeader: true
+            )
         }
     }
 }

@@ -151,6 +151,7 @@ final class ConfigurationManager: ObservableObject {
         )
 
         configurations.append(config)
+        committedNames[config.id] = config.name
 
         // Mark as not yet edited - disables + button until user makes changes
         // Use flag to prevent selectedConfigId's didSet from overriding this
@@ -189,6 +190,7 @@ final class ConfigurationManager: ObservableObject {
         )
 
         configurations.append(config)
+        committedNames[config.id] = config.name
         smartAddProvenanceIDs.insert(config.id)
 
         // A pre-filled tile counts as already edited — keep the + button enabled (unlike a blank
@@ -307,6 +309,7 @@ final class ConfigurationManager: ObservableObject {
         )
 
         configurations.append(duplicate)
+        committedNames[duplicate.id] = duplicate.name
         selectedConfigId = duplicate.id
 
         saveConfigurations()
@@ -473,6 +476,13 @@ final class ConfigurationManager: ObservableObject {
         do {
             let data = try Data(contentsOf: storageURL)
             configurations = try decoder.decode([DockTileConfiguration].self, from: data)
+            // Seed the listed names from what was loaded. Without this the map is empty and
+            // `displayName(for:)` falls through to the LIVE name, which the editor's auto-save
+            // rewrites on every keystroke — so the sidebar tracked each character until the tile
+            // happened to be actioned once in that session, which is the behaviour this map exists
+            // to prevent.
+            committedNames = Dictionary(configurations.map { ($0.id, $0.name) },
+                                        uniquingKeysWith: { _, latest in latest })
             print("📂 Loaded \(configurations.count) configuration(s) from \(storageURL.lastPathComponent)")
         } catch {
             print("❌ Failed to load configurations: \(error.localizedDescription)")

@@ -321,6 +321,10 @@ enum PopoverPanelLayout {
     static let gridLabelHeight: CGFloat = 18
     /// 2pt cell padding, top and bottom.
     static let gridCellPadding: CGFloat = 4
+    /// The editor-only "Not installed" caption under a missing app's icon: the cell VStack's 4pt
+    /// spacing + one 10pt line. Billed for EVERY row when any app in the tile is missing — which
+    /// row holds it isn't known here, and over-reserving leaves slack while under-reserving clips.
+    static let gridMissingCaptionHeight: CGFloat = 17
 
     // MARK: List chrome (`ListPopoverView`)
 
@@ -334,8 +338,10 @@ enum PopoverPanelLayout {
     /// The edit-mode empty state: a 13pt title line, 4pt spacing, and an 11pt subtitle that wraps to
     /// two lines at the default tier's text width. 16 + 4 + 28.
     static let listEmptyStateTextHeight: CGFloat = 48
-    /// The helper popover's two trailing utility rows (never shown in the editor).
-    static let listUtilityRowsHeight: CGFloat = 51
+    /// The helper popover's trailing utility block (never shown in the editor): a 1pt `Divider`
+    /// inside 4pt top/bottom padding, then two `ListMenuRow`s of ~24pt each (a 13pt line inside
+    /// 4pt top/bottom padding). 1 + 8 + 48.
+    static let listUtilityRowsHeight: CGFloat = 57
     static let listRowMinHeight: CGFloat = 28
 
     /// Columns actually drawn: the Popover Size tier capped at the app count, so a tile with fewer
@@ -349,7 +355,8 @@ enum PopoverPanelLayout {
     nonisolated static func gridPanelSize(
         metrics: PopoverGridMetrics,
         appCount: Int,
-        showLabels: Bool
+        showLabels: Bool,
+        includesMissingCaption: Bool = false
     ) -> CGSize {
         let cols = columnCount(metricsColumns: metrics.columns, appCount: appCount)
         let width = metrics.cellWidth * CGFloat(cols)
@@ -359,7 +366,10 @@ enum PopoverPanelLayout {
             return CGSize(width: max(width, gridEmptyMinWidth), height: gridEmptyHeight)
         }
         let rows = Int(ceil(Double(appCount) / Double(cols)))
-        let itemHeight = metrics.iconSize + (showLabels ? gridLabelHeight : 0) + gridCellPadding
+        let itemHeight = metrics.iconSize
+            + (showLabels ? gridLabelHeight : 0)
+            + (includesMissingCaption ? gridMissingCaptionHeight : 0)
+            + gridCellPadding
         let height = gridHeaderHeight
             + CGFloat(rows) * itemHeight
             + CGFloat(rows - 1) * metrics.gap

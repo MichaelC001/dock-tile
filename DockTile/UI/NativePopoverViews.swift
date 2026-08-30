@@ -509,11 +509,20 @@ struct StackPopoverView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    /// Does any cell draw the editor-only "Not installed" caption? That caption makes its row
+    /// taller, and this view pins its own height — an unbilled row is clipped. Resolved only in
+    /// edit mode, so the shipped popover never pays for the probe.
+    private var showsMissingCaption: Bool {
+        guard editing != nil else { return false }
+        return apps.contains { AppInstallChecker.resolve($0).status == .missing }
+    }
+
     private func calculateHeight() -> CGFloat {
         // Header + rows + padding, from the shared seam. Edit mode has no inner ScrollView, so it
         // reports its full height and lets Tile Detail's own scroll view do the scrolling.
         let totalHeight = PopoverPanelLayout.gridPanelSize(
-            metrics: metrics, appCount: apps.count, showLabels: settings.showLabels
+            metrics: metrics, appCount: apps.count, showLabels: settings.showLabels,
+            includesMissingCaption: showsMissingCaption
         ).height
         return editing != nil ? totalHeight : min(totalHeight, PopoverPanelLayout.gridScrollCap)
     }
