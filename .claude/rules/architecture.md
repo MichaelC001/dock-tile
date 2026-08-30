@@ -134,6 +134,34 @@ editor" below), and it carries the pane's **title text only, no pane icon**. The
 **static** sections — **Tiles · Settings (General, Popover, Dock Lock) · Dock Tile (About)** — the
 old accordion `@AppStorage` expand state is gone.
 
+- **Window-level chrome (AppKit, `WindowAccessor.configureWindow`)**: `titlebarAppearsTransparent
+  = true`, `titleVisibility = .hidden`, `toolbarStyle = .unified` — these three are what actually
+  collapse the native title bar into the toolbar strip that the SwiftUI-level `.toolbar(removing:)`
+  calls then repurpose as the title band. `.toolbar(removing: .title)` / `.toolbar(removing:
+  .sidebarToggle)` alone are not enough without this AppKit trio; `WindowAccessor` is an
+  `NSViewRepresentable` bridge run once on `makeNSView` and again on every `updateNSView`.
+- **`ToolbarSpacer(.flexible)` must ride in the SAME `.toolbar {}` call as the title (critical)**:
+  `PaneTitleBandWithActions` builds `paneTitleItem` (the title), `ToolbarSpacer(.flexible)`
+  (`#available(macOS 26.0, *)`-gated — it's a macOS 26 API, absent on older toolbars), and the
+  pane's trailing actions inside one `.toolbar { }` closure — never split across two `.toolbar {}`
+  modifiers (`ToolbarContentBuilder` has no zero-argument `buildBlock()`, which is why this needs
+  its own `PaneTitleBandWithActions` modifier rather than the plain title-only `PaneTitleBand` fed
+  empty trailing content). `.toolbar(removing: .title)` drops SwiftUI's automatic flexible space
+  between leading and trailing toolbar content, so trailing-placed items in a *separate* `.toolbar`
+  block collapse leftward and land right next to the title instead of trailing the band; the
+  spacer is what pushes them back out to the trailing edge, and it only works with the items it
+  shares a toolbar block with.
+- **`.sharedBackgroundVisibility(.hidden)` is macOS-26-gated**: on macOS 26+ the title
+  `ToolbarItem` is wrapped `.sharedBackgroundVisibility(.hidden)` so Tahoe doesn't draw it inside a
+  Liquid Glass capsule (title text should read as plain text, not a pill button); older macOS gets
+  the same `ToolbarItem` without that modifier, since the capsule treatment doesn't exist there.
+  Both branches live in `paneTitleItem`, the single `@ToolbarContentBuilder` function shared by
+  every pane so the two title-band variants can't drift apart.
+- **`PaneIcon` survives only for sidebar rows**: the title band itself is text-only by design (see
+  above) — `PaneIcon` (the squircle badge icon + tint per pane) is no longer used in any title
+  band. It lives on only as the leading badge icon for the Settings/About rows in
+  `DockTileSidebarView` (`PaneIcon.general` / `.popover` / `.dockLock` / `.about`).
+
 - **`.tilesPlaceholder` (critical)**: the "No Tiles" row is a **selectable** placeholder that routes
   to the empty-state detail. Without it, once the user opened a Settings pane at zero tiles there was
   no selectable tile row to click back to, stranding them in Settings. First launch and
