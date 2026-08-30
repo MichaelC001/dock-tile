@@ -391,12 +391,6 @@ enum AppStrings {
             comment: "Settings row description for the missing-app scan"
         )
 
-        static let layout = NSLocalizedString(
-            "label.layout",
-            value: "Layout",
-            comment: "Label for layout picker"
-        )
-
         static let showInAppSwitcher = NSLocalizedString(
             "label.showInAppSwitcher",
             value: "Show in App Switcher",
@@ -663,18 +657,6 @@ enum AppStrings {
             comment: "Section header and pane title for popover appearance settings"
         )
 
-        static let popoverAppearance = NSLocalizedString(
-            "settings.popover.appearance",
-            value: "Appearance",
-            comment: "Title of the drill-down row in General that opens popover settings"
-        )
-
-        static let popoverAppearanceSubtitle = NSLocalizedString(
-            "settings.popover.appearance.subtitle",
-            value: "Layout, size, spacing and labels for every tile's popover",
-            comment: "Subtitle under the Popover Appearance drill-down row"
-        )
-
         static let popoverSectionTiles = NSLocalizedString(
             "settings.popover.section.tiles",
             value: "Tiles",
@@ -876,12 +858,6 @@ enum AppStrings {
     // MARK: - Sections
 
     enum Section {
-        static let selectedItems = NSLocalizedString(
-            "section.selectedItems",
-            value: "Selected Items",
-            comment: "Section header for selected items"
-        )
-
         static let inThisTile = NSLocalizedString(
             "section.inThisTile",
             value: "In This Tile",
@@ -1011,22 +987,6 @@ enum AppStrings {
         )
     }
 
-    // MARK: - Table Headers
-
-    enum Table {
-        static let item = NSLocalizedString(
-            "table.item",
-            value: "Item",
-            comment: "Table column header for item"
-        )
-
-        static let kind = NSLocalizedString(
-            "table.kind",
-            value: "Kind",
-            comment: "Table column header for kind"
-        )
-    }
-
     // MARK: - Titles
 
     enum Title {
@@ -1092,12 +1052,6 @@ enum AppStrings {
             comment: "Empty state text when no apps configured"
         )
 
-        static let noItemsAdded = NSLocalizedString(
-            "empty.noItemsAdded",
-            value: "No items added yet",
-            comment: "Empty state text in apps table"
-        )
-
         static let noTiles = NSLocalizedString(
             "empty.noTiles",
             value: "No Tiles",
@@ -1128,22 +1082,6 @@ enum AppStrings {
             "filePicker.message",
             value: "Select one or more applications or folders to add",
             comment: "Message in file picker dialog"
-        )
-    }
-
-    // MARK: - Kind Values
-
-    enum Kind {
-        static let application = NSLocalizedString(
-            "kind.application",
-            value: "Application",
-            comment: "Kind value for applications"
-        )
-
-        static let folder = NSLocalizedString(
-            "kind.folder",
-            value: "Folder",
-            comment: "Kind value for folders"
         )
     }
 

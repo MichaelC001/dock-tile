@@ -15,7 +15,6 @@
 		AA0E9A37 /* DockTileIconPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA547156 /* DockTileIconPreview.swift */; };
 		AA218BB9 /* DockLockSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA4AC606 /* DockLockSettingsView.swift */; };
 		AA28203D /* ColorExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA90E3D3 /* ColorExtensions.swift */; };
-		AA291E3F /* ItemRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAF32B63 /* ItemRowView.swift */; };
 		AA2B0DD5 /* DockLockManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA4D24B5 /* DockLockManager.swift */; };
 		AA3FF186 /* ConfigurationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAC48362 /* ConfigurationManager.swift */; };
 		AASAE01 /* SmartAddEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AASAE02 /* SmartAddEngine.swift */; };
@@ -110,7 +109,6 @@
 		AA0D6A16 /* ConfigurationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigurationModels.swift; sourceTree = "<group>"; };
 		AA12D329 /* DockTileConfigurationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DockTileConfigurationView.swift; sourceTree = "<group>"; };
 		AA169EDE /* DockTileSidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DockTileSidebarView.swift; sourceTree = "<group>"; };
-		AA2CAE1C /* ItemRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemRowView.swift; sourceTree = "<group>"; };
 		AA474359 /* DockTileDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DockTileDetailView.swift; sourceTree = "<group>"; };
 		AA4AC606 /* DockLockSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DockLockSettingsView.swift; sourceTree = "<group>"; };
 		AA4D24B5 /* DockLockManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DockLockManager.swift; sourceTree = "<group>"; };
@@ -139,7 +137,6 @@
 		AAREL00A /* AppRelocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRelocation.swift; sourceTree = "<group>"; };
 		AAENV001 /* Environment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Environment.swift; sourceTree = "<group>"; };
 		AAEPGV01 /* EmojiPickerGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiPickerGrid.swift; sourceTree = "<group>"; };
-		AAF32B63 /* ItemRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemRowView.swift; sourceTree = "<group>"; };
 		AAGSI02 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		AAGSV02 /* GeneralSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsView.swift; sourceTree = "<group>"; };
 		AAPAM02 /* PopoverAppearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverAppearance.swift; sourceTree = "<group>"; };
@@ -298,8 +295,6 @@
 			isa = PBXGroup;
 			children = (
 				AA547156 /* DockTileIconPreview.swift */,
-				AAF32B63 /* ItemRowView.swift */,
-				AA2CAE1C /* ItemRowView.swift */,
 				AAC2BA1B /* DockTileIconPreview.swift */,
 				AAIGOV01 /* IconGridOverlay.swift */,
 				AASPGV01 /* SymbolPickerGrid.swift */,
@@ -586,7 +581,6 @@
 				AAANS01 /* AnalyticsService.swift in Sources */,
 				AAHMM01 /* HelperMigrationManager.swift in Sources */,
 				AADPW002 /* DockPlistWatcher.swift in Sources */,
-				AA291E3F /* ItemRowView.swift in Sources */,
 				AA0E9A37 /* DockTileIconPreview.swift in Sources */,
 				AA7EF687 /* CustomiseTileView.swift in Sources */,
 				AAAB0001 /* AboutView.swift in Sources */,

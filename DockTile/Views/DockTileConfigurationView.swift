@@ -44,8 +44,9 @@ struct DockTileConfigurationView: View {
         let suggestions: [TileSuggestion]
     }
 
-    /// Smart Add on/off (opt-out, default ON). When OFF, + always creates a blank tile — see
-    /// the General settings toggle. Main-app domain.
+    /// Smart Add on/off (opt-out, default ON). Only decides whether the Add a Tile dialog is
+    /// populated with suggestions — the dialog itself always opens, from every add entry point
+    /// (sidebar +, General's row, the empty state). See `handleAddTapped` below. Main-app domain.
     @AppStorage(UserDefaultsKeys.smartAddEnabled) private var smartAddEnabled = true
 
     /// Single source of truth for what the sidebar has selected and what fills the detail
@@ -142,8 +143,10 @@ struct DockTileConfigurationView: View {
         } message: {
             Text(AppStrings.Alert.missingAppsMessage)
         }
-        // Smart Add: shown when + finds on-device suggestions. Nothing here docks a tile — picking
-        // a suggestion only pre-fills Tile Detail; the explicit Add to Dock confirm stays there.
+        // Add a Tile dialog: presented unconditionally from every add entry point. When there is
+        // nothing to suggest it shows just the blank-tile row plus a "No suggestions yet" note.
+        // Nothing here docks a tile — picking a suggestion only pre-fills Tile Detail; the
+        // explicit Add to Dock confirm stays there.
         .sheet(item: $smartAddPresentation) { presentation in
             SmartAddSheet(
                 suggestions: presentation.suggestions,

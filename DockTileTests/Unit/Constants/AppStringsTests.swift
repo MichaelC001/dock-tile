@@ -62,7 +62,6 @@ struct AppStringsTests {
 
         // Labels
         #expect(!AppStrings.Label.colour.isEmpty)
-        #expect(!AppStrings.Label.layout.isEmpty)
         #expect(!AppStrings.Label.showInAppSwitcher.isEmpty)
         #expect(!AppStrings.Label.showTile.isEmpty)
         #expect(!AppStrings.Label.tileIcon.isEmpty)
@@ -110,7 +109,6 @@ struct AppStringsTests {
         #expect(AppStrings.Sidebar.dockTileSection == "Dock Tile")
 
         // Sections
-        #expect(!AppStrings.Section.selectedItems.isEmpty)
         #expect(!AppStrings.Section.inThisTile.isEmpty)
         #expect(!AppStrings.Label.editorHint.isEmpty)
 
@@ -122,10 +120,6 @@ struct AppStringsTests {
         // Tabs
         #expect(!AppStrings.Tab.emoji.isEmpty)
         #expect(!AppStrings.Tab.symbol.isEmpty)
-
-        // Table headers
-        #expect(!AppStrings.Table.item.isEmpty)
-        #expect(!AppStrings.Table.kind.isEmpty)
 
         // Titles
         #expect(!AppStrings.Title.deleteTile.isEmpty)
@@ -140,7 +134,6 @@ struct AppStringsTests {
         #expect(!AppStrings.Empty.createFirstTileDescription.isEmpty)
         #expect(!AppStrings.Empty.detail.isEmpty)
         #expect(!AppStrings.Empty.noApps.isEmpty)
-        #expect(!AppStrings.Empty.noItemsAdded.isEmpty)
         #expect(!AppStrings.Empty.noTiles.isEmpty)
 
         // Search
@@ -149,10 +142,6 @@ struct AppStringsTests {
 
         // File picker
         #expect(!AppStrings.FilePicker.message.isEmpty)
-
-        // Kind values
-        #expect(!AppStrings.Kind.application.isEmpty)
-        #expect(!AppStrings.Kind.folder.isEmpty)
 
         // Popover editing (Tile Detail's preview editor)
         #expect(!AppStrings.PopoverOption.editingRemove.isEmpty)
