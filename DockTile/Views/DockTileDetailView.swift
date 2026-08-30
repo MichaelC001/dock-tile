@@ -486,6 +486,11 @@ struct DockTileDetailView: View {
                     },
                     onMove: { dragged, target in
                         editedConfig.appItems = AppListEditor.moving(dragged.id, onto: target.id, in: editedConfig.appItems)
+                    },
+                    // The empty panel's glyph opens the same picker as the "+ Add" control above.
+                    onAdd: {
+                        DiagnosticsLog.shared.ui("Tile editor → empty-state glyph pressed (app picker)")
+                        addItem()
                     }))
 
             if let error = errorMessage {

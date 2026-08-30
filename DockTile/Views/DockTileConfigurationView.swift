@@ -62,8 +62,7 @@ struct DockTileConfigurationView: View {
         NavigationSplitView {
             // Sidebar: static Tiles / Settings / Dock Tile sections
             DockTileSidebarView(selection: $selection,
-                                onAdd: { handleAddTapped(source: .toolbarPlus) },
-                                onAddFromRow: { handleAddTapped(source: .sidebarRow) })
+                                onAdd: { handleAddTapped(source: .toolbarPlus) })
                 .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 280)
         } detail: {
             detailColumn
@@ -177,7 +176,6 @@ struct DockTileConfigurationView: View {
     /// carry the source or a diagnostics log can't tell the sidebar row from the toolbar +.
     enum AddSource: String {
         case toolbarPlus = "+ button"
-        case sidebarRow = "sidebar Add row"
         case emptyState = "empty state"
         case generalSettings = "General → Add a Tile"
     }

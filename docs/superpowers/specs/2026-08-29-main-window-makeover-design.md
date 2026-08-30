@@ -48,7 +48,7 @@ zero-tile and draft states, Popover controls), add an **About** pane, and ship *
   labelled "Add a Tile", ⌘-accessible).
 - **Implementation approach (spike first):** keep SwiftUI's toolbar and place the header as toolbar
   items (`.navigation` for title, `.primaryAction` for actions) with `.toolbar(removing: .title)`,
-  `.toolbar(removing: .sidebarToggle)`, `.toolbarBackground(.hidden, for: .windowToolbar)`,
+  `.toolbarBackground(.hidden, for: .windowToolbar)`,
   `titlebarAppearsTransparent`. On macOS 26 Tahoe, toolbar items render in glass capsules — the spike
   must confirm `sharedBackgroundVisibility(.hidden)`/plain labels render flush like the canvas. Fallback:
   Klack's approach — an `NSWindow` with `fullSizeContentView`, an empty `NSToolbar` for the band height,
@@ -232,3 +232,13 @@ Dock Lock conditional rows, login approval row, provenance banner, no-suggestion
   preview editor's reorder/remove reducer (plain array in/out), and the draft-icon default.
 - Manual: chrome spike on macOS 26 in light/dark; Dock add/update/remove from the new band; helper
   popovers unaffected (edit mode never reaches helpers).
+
+
+## Amendment — 2026-08-30 (post-build review)
+
+- **The sidebar keeps the standard macOS header pair: collapse toggle + `+`.** Removing the toggle
+  was tried and reverted; the `+` is always visible, including at zero tiles.
+- **Zero tiles shows the inert, selectable "No Tiles" row.** The empty-state detail's button is the
+  single add affordance; the row exists only so a user in a Settings pane can navigate back.
+- **The empty tile preview's glyph is a button in the editor** — it opens the same app picker as
+  "+ Add". `editing == nil` (helpers, Settings preview) leaves it an inert image.

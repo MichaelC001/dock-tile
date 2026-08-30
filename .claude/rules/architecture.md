@@ -127,19 +127,20 @@ The main window's `SidebarSelection` (a tile, a Settings pane, or the `.tilesPla
 into `ConfigurationManager.selectedConfigId`. Both the empty state and Settings live in the same
 detail column, so navigation invariants matter.
 
-**v2 chrome**: the window has no title and no sidebar toggle (`.toolbar(removing: .title)` /
-`.toolbar(removing: .sidebarToggle)` on `DockTileConfigurationView`, belt-and-braced on the
-sidebar column itself) — the 52pt title band IS the page header (`paneTitleBand`, see "Tile
-editor" below), and it carries the pane's **title text only, no pane icon**. The sidebar is three
-**static** sections — **Tiles · Settings (General, Popover, Dock Lock) · Dock Tile (About)** — the
-old accordion `@AppStorage` expand state is gone.
+**v2 chrome**: the window has no title (`.toolbar(removing: .title)` on
+`DockTileConfigurationView`) — the 52pt title band IS the page header (`paneTitleBand`, see "Tile
+editor" below), and it carries the pane's **title text only, no pane icon**. The sidebar keeps the
+**standard macOS header pair — the collapse toggle and `+`** (as in Notes/Reminders); v2 briefly
+removed the toggle via `.toolbar(removing: .sidebarToggle)` and that was **deliberately reverted**,
+so do not re-add it. The sidebar is three **static** sections — **Tiles · Settings (General,
+Popover, Dock Lock) · Dock Tile (About)** — the old accordion `@AppStorage` expand state is gone.
 
 - **Window-level chrome (AppKit, `WindowAccessor.configureWindow`)**: `titlebarAppearsTransparent
   = true`, `titleVisibility = .hidden`, `toolbarStyle = .unified` — these three are what actually
   collapse the native title bar into the toolbar strip that the SwiftUI-level `.toolbar(removing:)`
-  calls then repurpose as the title band. `.toolbar(removing: .title)` / `.toolbar(removing:
-  .sidebarToggle)` alone are not enough without this AppKit trio; `WindowAccessor` is an
-  `NSViewRepresentable` bridge run once on `makeNSView` and again on every `updateNSView`.
+  call then repurposes as the title band. `.toolbar(removing: .title)` alone is not enough without
+  this AppKit trio; `WindowAccessor` is an `NSViewRepresentable` bridge run once on `makeNSView`
+  and again on every `updateNSView`.
 - **`ToolbarSpacer(.flexible)` must ride in the SAME `.toolbar {}` call as the title (critical)**:
   `PaneTitleBandWithActions` builds `paneTitleItem` (the title), `ToolbarSpacer(.flexible)`
   (`#available(macOS 26.0, *)`-gated — it's a macOS 26 API, absent on older toolbars), and the

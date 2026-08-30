@@ -165,6 +165,40 @@ extension VisualEffectView {
 struct PopoverEditing {
     let onRemove: (AppItem) -> Void
     let onMove: (_ dragged: AppItem, _ target: AppItem) -> Void
+    /// Opens the app picker. Drives the empty panel's glyph, which is the obvious thing to click
+    /// when the tile has nothing in it yet. Optional so an editor that only reorders can omit it.
+    var onAdd: (() -> Void)? = nil
+}
+
+/// The empty panel's glyph. A button that opens the app picker when the panel is being edited, an
+/// inert image otherwise — so the shipped popover's empty state stays exactly as it was.
+struct EmptyStateGlyph: View {
+    let onAdd: (() -> Void)?
+    @State private var isHovering = false
+
+    private var glyph: some View {
+        Image(systemName: "plus.app")
+            .font(.system(size: 32))
+            .foregroundStyle(.secondary)
+    }
+
+    var body: some View {
+        if let onAdd {
+            Button(action: onAdd) {
+                glyph
+                    .opacity(isHovering ? 1 : 0.85)
+                    .scaleEffect(isHovering ? 1.06 : 1)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .onHover { isHovering = $0 }
+            .animation(.easeOut(duration: 0.12), value: isHovering)
+            .help(AppStrings.Label.addAppsTooltip)
+            .accessibilityLabel(AppStrings.Label.addAppsTooltip)
+        } else {
+            glyph
+        }
+    }
 }
 
 /// Drag-to-reorder inside the panel; copied from DockTileDetailView's table (the original is
@@ -440,9 +474,11 @@ struct StackPopoverView: View {
         VStack(spacing: 8) {
             // `plus.app`, NOT `app.badge.plus` — the latter is not a real SF Symbol, so it rendered
             // as nothing at all. Silent: an unknown symbol name draws empty with no warning.
-            Image(systemName: "plus.app")
-                .font(.system(size: 32))
-                .foregroundStyle(.secondary)
+            //
+            // In the editor the glyph IS the add button — it is the obvious thing to click in an
+            // empty tile, and it runs the same `addItem` as the "+ Add" control above the canvas.
+            // In the shipped popover `editing` is nil, so it stays a plain, inert image.
+            EmptyStateGlyph(onAdd: editing?.onAdd)
             if editing != nil {
                 // Same two-line shape as the shipped state below — one title, one supporting line.
                 Text(AppStrings.PopoverOption.editingNoAppsTitle)

@@ -19,33 +19,19 @@ struct DockTileSidebarView: View {
     /// sheet (if the engine has suggestions) or fall through to a blank tile — see
     /// `DockTileConfigurationView`. Kept as a closure so the sheet stays hosted in the parent.
     var onAdd: () -> Void
-    /// Same flow as `onAdd`, but from the zero-tiles row rather than the toolbar +, so the
-    /// diagnostics trace can tell the two affordances apart.
-    var onAddFromRow: () -> Void
 
     var body: some View {
         List(selection: $selection) {
             Section(AppStrings.Sidebar.tilesSection) {
                 if configManager.configurations.isEmpty {
-                    // At zero tiles this row IS the only way to add one — the toolbar + stays hidden
-                    // until a tile exists (see `addButton`). It also replaces the old inert
-                    // "No Tiles" placeholder as the escape route out of a Settings pane: with no
-                    // tile rows to click back to, the user would otherwise be stranded there.
-                    Button(action: onAddFromRow) {
-                        HStack(spacing: 12) {
-                            Image(systemName: "plus")
-                                .font(.system(size: 13, weight: .medium))
-                                .frame(width: 24, height: 24)
-                                .foregroundStyle(.secondary)
-                            Text(AppStrings.Button.addATile)
-                                .font(.system(size: 13))
-                            Spacer()
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.vertical, 4)
-                    .tag(SidebarSelection.tilesPlaceholder)
+                    // Navigation, NOT an add affordance: the empty-state detail already carries the
+                    // single "Add a Tile…" button. This row exists so the user can get BACK to that
+                    // empty state after visiting a Settings pane — with zero tiles there is no other
+                    // selectable row in this section, and without it they are stranded in Settings.
+                    Text(AppStrings.Empty.noTiles)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .tag(SidebarSelection.tilesPlaceholder)
                 } else {
                     ForEach(configManager.configurations) { config in
                         ConfigurationRow(config: config)
@@ -89,24 +75,19 @@ struct DockTileSidebarView: View {
         // `.sidebar` style gives the section headers their native treatment and the tile-row
         // selection highlight.
         .listStyle(.sidebar)
-        // The ONLY placement that actually suppresses the toggle: applied at the NavigationSplitView
-        // level it still rendered. It must stay on the sidebar column's own content.
-        .toolbar(removing: .sidebarToggle)
+        // The sidebar keeps the standard macOS header pair — the collapse toggle and +, as in Notes
+        // and Reminders. (v2 briefly dropped the toggle; it is deliberately back.)
         .toolbar {
-            // Hidden until the first tile exists: at zero tiles the "Add a Tile…" row above is the
-            // single add affordance, so first run offers exactly one way in rather than three.
-            if !configManager.configurations.isEmpty {
-                ToolbarItem(placement: .primaryAction) {
-                    Button(action: onAdd) {
-                        Image(systemName: "plus")
-                    }
-                    .accessibilityIdentifier("addTileButton")
-                    .accessibilityLabel(AppStrings.Button.addATile)
-                    .disabled(!configManager.canCreateNewTile)
-                    .help(configManager.canCreateNewTile
-                        ? AppStrings.Tooltip.createNewTile
-                        : AppStrings.Tooltip.editFirst)
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: onAdd) {
+                    Image(systemName: "plus")
                 }
+                .accessibilityIdentifier("addTileButton")
+                .accessibilityLabel(AppStrings.Button.addATile)
+                .disabled(!configManager.canCreateNewTile)
+                .help(configManager.canCreateNewTile
+                    ? AppStrings.Tooltip.createNewTile
+                    : AppStrings.Tooltip.editFirst)
             }
         }
     }
@@ -249,7 +230,7 @@ struct ConfigurationContextMenu: View {
 
 #Preview {
     NavigationSplitView {
-        DockTileSidebarView(selection: .constant(nil), onAdd: {}, onAddFromRow: {})
+        DockTileSidebarView(selection: .constant(nil), onAdd: {})
             .environmentObject({
                 let manager = ConfigurationManager()
                 manager.createConfiguration()
