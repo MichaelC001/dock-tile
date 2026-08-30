@@ -42,6 +42,14 @@ struct PopoverPreviewCanvasTests {
         #expect(size == CGSize(width: 240, height: 264))
     }
 
+    @Test("Empty list in the editor: sized for the edit-mode empty state, not a phantom row")
+    func naturalListPanelSizeEmpty() {
+        let size = PopoverPreviewCanvas.naturalPanelSize(
+            layout: .list, appCount: 0, settings: .default, includesUtilityRows: false)
+        // 32 header + 32 empty-state vertical padding + 30 two-line text + 16 outer padding = 110
+        #expect(size == CGSize(width: 240, height: 110))
+    }
+
     @Test("A panel wider than the detail column scales DOWN to fit flush")
     func naturalScaleShrinksOverflowingPanel() {
         let s = PopoverPreviewCanvas.naturalScale(availableWidth: 488, panelWidth: 498)

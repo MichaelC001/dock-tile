@@ -591,9 +591,20 @@ struct PopoverPreviewCanvas: View {
         case .list:
             let m = PopoverMetrics.list(popoverSize: settings.popoverSize, tileSize: settings.tileSize,
                                         spacing: settings.spacing)
+            guard appCount > 0 else {
+                // `.natural` only ever renders with `editing != nil` (see `naturalFit`), so an empty
+                // tile shows `ListPopoverView`'s EDIT-mode empty state, not the helper-popover one:
+                // the 32pt title header (`ListPopoverView.body`, the `!tileName.isEmpty` block,
+                // :683-690) + `emptyStateView` (:757-765) — its 12pt `editingNoAppsYet` text wraps to
+                // 2 lines (30pt, measured at the default-tier 216pt text width) inside the view's own
+                // 16pt top/bottom padding (32pt) — + the panel's own 16pt outer
+                // `.padding(.vertical, 8)` (:738). 32 (header) + 32 (empty-state padding) + 30 (text)
+                // + 16 (outer padding) = 110.
+                return CGSize(width: m.width, height: 110)
+            }
             let rowHeight = max(28, max(m.iconSize, m.fontSize + 3) + m.rowVerticalPadding * 2)
             let utility: CGFloat = includesUtilityRows ? 51 : 0
-            let height = 32 + CGFloat(max(1, appCount)) * rowHeight + utility + 16
+            let height = 32 + CGFloat(appCount) * rowHeight + utility + 16
             return CGSize(width: m.width, height: height)
         }
     }
