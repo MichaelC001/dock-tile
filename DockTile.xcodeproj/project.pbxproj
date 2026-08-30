@@ -32,6 +32,9 @@
 		AAD57BC8 /* DockTileDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AADDFDF7 /* DockTileDetailView.swift */; };
 		AADPW002 /* DockPlistWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = AADPW001 /* DockPlistWatcher.swift */; };
 		AADTG01 /* DockTileGlyph.png in Resources */ = {isa = PBXBuildFile; fileRef = AADTG02 /* DockTileGlyph.png */; };
+		AAHML01 /* HappyMachinesLogo.svg in Resources */ = {isa = PBXBuildFile; fileRef = AAHML02 /* HappyMachinesLogo.svg */; };
+		AASPL01 /* SpadesIconLight.png in Resources */ = {isa = PBXBuildFile; fileRef = AASPL02 /* SpadesIconLight.png */; };
+		AASPD01 /* SpadesIconDark.png in Resources */ = {isa = PBXBuildFile; fileRef = AASPD02 /* SpadesIconDark.png */; };
 		AAENV002 /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAENV001 /* Environment.swift */; };
 		AAEPGV02 /* EmojiPickerGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAEPGV01 /* EmojiPickerGrid.swift */; };
 		AAFB020 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = AAFB010 /* FirebaseAnalytics */; };
@@ -133,6 +136,9 @@
 		AADDFDF7 /* DockTileDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DockTileDetailView.swift; sourceTree = "<group>"; };
 		AADPW001 /* DockPlistWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DockPlistWatcher.swift; sourceTree = "<group>"; };
 		AADTG02 /* DockTileGlyph.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = DockTileGlyph.png; sourceTree = "<group>"; };
+		AAHML02 /* HappyMachinesLogo.svg */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = HappyMachinesLogo.svg; sourceTree = "<group>"; };
+		AASPL02 /* SpadesIconLight.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = SpadesIconLight.png; sourceTree = "<group>"; };
+		AASPD02 /* SpadesIconDark.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = SpadesIconDark.png; sourceTree = "<group>"; };
 		AAE6EC9F /* DiagnosticsLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsLog.swift; sourceTree = "<group>"; };
 		AAREL00A /* AppRelocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRelocation.swift; sourceTree = "<group>"; };
 		AAENV001 /* Environment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Environment.swift; sourceTree = "<group>"; };
@@ -266,6 +272,9 @@
 				AA0008 /* Info.plist */,
 				AAGSI02 /* GoogleService-Info.plist */,
 				AADTG02 /* DockTileGlyph.png */,
+				AAHML02 /* HappyMachinesLogo.svg */,
+				AASPL02 /* SpadesIconLight.png */,
+				AASPD02 /* SpadesIconDark.png */,
 				AALI000 /* LoginItems */,
 			);
 			path = Resources;
@@ -544,6 +553,9 @@
 				AAICND01 /* AppIcon-Dev.icon in Resources */,
 				AAGSI01 /* GoogleService-Info.plist in Resources */,
 				AADTG01 /* DockTileGlyph.png in Resources */,
+				AAHML01 /* HappyMachinesLogo.svg in Resources */,
+				AASPL01 /* SpadesIconLight.png in Resources */,
+				AASPD01 /* SpadesIconDark.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

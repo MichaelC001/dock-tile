@@ -61,7 +61,9 @@ struct DockTileConfigurationView: View {
     var body: some View {
         NavigationSplitView {
             // Sidebar: static Tiles / Settings / Dock Tile sections
-            DockTileSidebarView(selection: $selection, onAdd: handleAddTapped)
+            DockTileSidebarView(selection: $selection,
+                                onAdd: { handleAddTapped(source: .toolbarPlus) },
+                                onAddFromRow: { handleAddTapped(source: .sidebarRow) })
                 .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 280)
         } detail: {
             detailColumn
@@ -126,7 +128,7 @@ struct DockTileConfigurationView: View {
             selection = .settings((note.object as? SettingsPane) ?? .general)
         }
         .onReceive(NotificationCenter.default.publisher(for: .addTileRequested)) { _ in
-            handleAddTapped()
+            handleAddTapped(source: .generalSettings)
         }
         // Non-destructive prompt raised by the launch scan when tiles reference uninstalled apps.
         // "Keep" just dismisses — the rows stay flagged inline so the user can act later.
@@ -171,11 +173,20 @@ struct DockTileConfigurationView: View {
     /// The + toolbar action (and every other add entry point). The Add a Tile dialog always
     /// opens — the blank row is the first thing you see. Smart Add only decides whether the
     /// dialog's suggestions are populated, never whether the dialog appears.
-    private func handleAddTapped() {
+    /// Which affordance opened the dialog. Every entry point runs the SAME flow, so the trace has to
+    /// carry the source or a diagnostics log can't tell the sidebar row from the toolbar +.
+    enum AddSource: String {
+        case toolbarPlus = "+ button"
+        case sidebarRow = "sidebar Add row"
+        case emptyState = "empty state"
+        case generalSettings = "General → Add a Tile"
+    }
+
+    private func handleAddTapped(source: AddSource) {
         let computed = smartAddEnabled
             ? smartAddEngine.computeSuggestions(existing: configManager.configurations) : []
         let suggestions = SmartAddEngine.suggestionsForAddFlow(enabled: smartAddEnabled, computed: computed)
-        DiagnosticsLog.shared.ui("+ pressed → Add a Tile dialog (\(suggestions.count) suggestion(s), smartAdd=\(smartAddEnabled))")
+        DiagnosticsLog.shared.ui("\(source.rawValue) → Add a Tile dialog (\(suggestions.count) suggestion(s), smartAdd=\(smartAddEnabled))")
         smartAddPresentation = SmartAddPresentation(suggestions: suggestions)
     }
 
@@ -244,7 +255,7 @@ struct DockTileConfigurationView: View {
             .animation(.easeInOut(duration: 0.3), value: isDrilledDown)
         } else {
             // Empty state — routes through the same Smart Add flow as the sidebar +.
-            EmptyConfigurationView(onAdd: handleAddTapped)
+            EmptyConfigurationView(onAdd: { handleAddTapped(source: .emptyState) })
         }
     }
 }

@@ -19,6 +19,9 @@ struct DockTileSidebarView: View {
     /// sheet (if the engine has suggestions) or fall through to a blank tile — see
     /// `DockTileConfigurationView`. Kept as a closure so the sheet stays hosted in the parent.
     var onAdd: () -> Void
+    /// Same flow as `onAdd`, but from the zero-tiles row rather than the toolbar +, so the
+    /// diagnostics trace can tell the two affordances apart.
+    var onAddFromRow: () -> Void
 
     var body: some View {
         List(selection: $selection) {
@@ -28,7 +31,7 @@ struct DockTileSidebarView: View {
                     // until a tile exists (see `addButton`). It also replaces the old inert
                     // "No Tiles" placeholder as the escape route out of a Settings pane: with no
                     // tile rows to click back to, the user would otherwise be stranded there.
-                    Button(action: onAdd) {
+                    Button(action: onAddFromRow) {
                         HStack(spacing: 12) {
                             Image(systemName: "plus")
                                 .font(.system(size: 13, weight: .medium))
@@ -246,7 +249,7 @@ struct ConfigurationContextMenu: View {
 
 #Preview {
     NavigationSplitView {
-        DockTileSidebarView(selection: .constant(nil), onAdd: {})
+        DockTileSidebarView(selection: .constant(nil), onAdd: {}, onAddFromRow: {})
             .environmentObject({
                 let manager = ConfigurationManager()
                 manager.createConfiguration()

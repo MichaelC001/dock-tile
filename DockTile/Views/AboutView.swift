@@ -18,8 +18,9 @@ enum AboutLinks {
     static let website = URL(string: "https://docktile.app/?\(campaign)")!
     static let studio  = URL(string: "https://happymachines.company/?\(campaign)")!
     static let spades  = URL(string: "https://spadesaudio.com/?\(campaign)")!
-    /// What the Website row shows — the bare host, without the tracking query.
+    /// What the rows show — the bare hosts, without the tracking query.
     static let websiteDisplay = "docktile.app"
+    static let studioDisplay  = "happymachines.company"
     static var feedback: URL {
         guard let email = Bundle.main.object(forInfoDictionaryKey: "DTFeedbackEmail") as? String,
               !email.isEmpty else { return website }
@@ -94,11 +95,13 @@ struct AboutPaneView: View {
                         }
                     }
                     Section {
-                        studioRow(icon: "face.smiling", tint: .orange, title: AppStrings.About.studioTitle,
+                        studioRow(icon: { HappyMachinesMark() },
+                                  title: AppStrings.About.studioTitle,
                                   subtitle: AppStrings.About.studioSubtitle) {
-                            Link("happymachines.company", destination: AboutLinks.studio)
+                            Link(AboutLinks.studioDisplay, destination: AboutLinks.studio)
                         }
-                        studioRow(icon: "suit.spade.fill", tint: .black, title: AppStrings.About.spadesTitle,
+                        studioRow(icon: { SpadesMark() },
+                                  title: AppStrings.About.spadesTitle,
                                   subtitle: AppStrings.About.spadesSubtitle) {
                             Button(AppStrings.About.learnMore) { NSWorkspace.shared.open(AboutLinks.spades) }
                         }
@@ -140,18 +143,78 @@ struct AboutPaneView: View {
         .accessibilityLabel(AppStrings.appName)
     }
 
-    private func studioRow<Trailing: View>(icon: String, tint: Color, title: String, subtitle: String,
-                                           @ViewBuilder trailing: () -> Trailing) -> some View {
+    private func studioRow<Trailing: View, Icon: View>(@ViewBuilder icon: () -> Icon,
+                                                       title: String, subtitle: String,
+                                                       @ViewBuilder trailing: () -> Trailing) -> some View {
         LabeledContent {
             trailing()
         } label: {
             HStack(spacing: 12) {
-                SettingsBadgeIcon(systemName: icon, tint: tint, size: 28)
+                icon().frame(width: 28, height: 28)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
                     Text(subtitle).font(.caption).foregroundStyle(.secondary)
                 }
             }
+        }
+    }
+}
+
+// MARK: - Vendor marks
+
+/// The real Happy Machines and Spades marks, bundled as loose resources (this project has no asset
+/// catalog — see `DockTileGlyph.png` for the same pattern).
+///
+/// Each falls back to an SF Symbol if its file is missing or fails to decode: a bundled image that
+/// doesn't load renders as **nothing at all**, and an empty gap beside a product name reads as a
+/// layout bug rather than a missing asset.
+enum VendorMark {
+
+    /// Happy Machines: a single monochrome stroke, so it ships as ONE vector and is drawn as a
+    /// template tinted to the current foreground — no light/dark pair to keep in sync.
+    static var happyMachines: NSImage? {
+        guard let url = Bundle.main.url(forResource: "HappyMachinesLogo", withExtension: "svg"),
+              let image = NSImage(contentsOf: url) else { return nil }
+        image.isTemplate = true
+        return image
+    }
+
+    /// Spades ships a full-colour app icon, so it can't be tinted — it takes the light or dark
+    /// rendition the way the Dock would.
+    static func spades(dark: Bool) -> NSImage? {
+        Bundle.main.url(forResource: dark ? "SpadesIconDark" : "SpadesIconLight", withExtension: "png")
+            .flatMap(NSImage.init(contentsOf:))
+    }
+}
+
+/// Happy Machines' mark, tinted to the foreground; the smiling-face symbol if the asset is absent.
+private struct HappyMachinesMark: View {
+    var body: some View {
+        if let mark = VendorMark.happyMachines {
+            Image(nsImage: mark)
+                .resizable()
+                .renderingMode(.template)
+                .aspectRatio(contentMode: .fit)
+                .foregroundStyle(.primary)
+                .padding(1)
+        } else {
+            SettingsBadgeIcon(systemName: "face.smiling", tint: .orange, size: 28)
+        }
+    }
+}
+
+/// Spades' app icon at its natural corner radius; the spade symbol if the asset is absent.
+private struct SpadesMark: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        if let mark = VendorMark.spades(dark: colorScheme == .dark) {
+            Image(nsImage: mark)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        } else {
+            SettingsBadgeIcon(systemName: "suit.spade.fill", tint: .black, size: 28)
         }
     }
 }
