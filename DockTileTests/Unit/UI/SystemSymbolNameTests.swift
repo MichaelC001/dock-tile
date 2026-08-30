@@ -8,6 +8,12 @@
 //  enough to show the hole. This sweeps every symbol literal in the app sources and requires the
 //  system to resolve it.
 //
+//  **Known blind spot — do not trust this alone for a NEW symbol.** `NSImage(systemSymbolName:)`
+//  resolves against the OS the tests run on, which is newer than the app's macOS 15 deployment
+//  floor. A symbol introduced in macOS 26 passes here and draws nothing for a macOS 15 user. Every
+//  name currently swept predates 15 by years, so there is no live exposure; when adding one, check
+//  its availability in the SF Symbols app first — this test cannot.
+//
 
 import AppKit
 import Foundation

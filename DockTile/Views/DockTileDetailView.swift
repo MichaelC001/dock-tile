@@ -392,12 +392,7 @@ struct DockTileDetailView: View {
                     Text(AppStrings.Label.showTile)
                     Spacer()
                     Toggle("", isOn: $editedConfig.isVisibleInDock)
-                        .labelsHidden()
-                        .toggleStyle(.switch)
-                        // `.mini` renders 36x16 — the size the Form-hosted switches in Dock Lock and
-                        // General already use. One switch size app-wide; `.small` is 44x20 and stood
-                        // out against every settings pane.
-                        .controlSize(.mini)
+                        .tileSwitch()
                 }
 
                 // Row 3: Show in App Switcher (last row, no separator)
@@ -406,9 +401,7 @@ struct DockTileDetailView: View {
                     Text(AppStrings.Label.showInAppSwitcher)
                     Spacer()
                     Toggle("", isOn: $editedConfig.showInAppSwitcher)
-                        .labelsHidden()
-                        .toggleStyle(.switch)
-                        .controlSize(.mini)
+                        .tileSwitch()
                 }
             }
             .padding(.horizontal, 10)

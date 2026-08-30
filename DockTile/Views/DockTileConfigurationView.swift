@@ -456,6 +456,20 @@ extension View {
     ) -> some View {
         modifier(PaneTitleBandWithActions(title: title, trailing: trailing))
     }
+
+    /// The app's one switch size, for a **labels-hidden** toggle in a hand-built row (Tile Detail,
+    /// Popover). Renders 36×16 — the size SwiftUI's `Form` already gives its own toggles, so the
+    /// Settings panes match without setting anything.
+    ///
+    /// **Do NOT apply this to a `Form` toggle that carries a text label** (General, Dock Lock):
+    /// `controlSize` scales the label typography too, so forcing `.mini` there would shrink their
+    /// title and description text. Those panes match by inheriting the Form default — that is
+    /// deliberate, not an oversight. One decision, two mechanisms, for a reason.
+    func tileSwitch() -> some View {
+        labelsHidden()
+            .toggleStyle(.switch)
+            .controlSize(.mini)
+    }
 }
 
 // MARK: - Preview

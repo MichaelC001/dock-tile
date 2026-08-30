@@ -335,9 +335,16 @@ enum PopoverPanelLayout {
     static let listOuterVerticalPadding: CGFloat = 8
     /// `emptyStateView`'s own vertical padding, top and bottom.
     static let listEmptyStatePadding: CGFloat = 16
-    /// The edit-mode empty state: a 13pt title line, 4pt spacing, and an 11pt subtitle that wraps to
+    /// The EDIT-mode empty state: a 13pt title line, 4pt spacing, and an 11pt subtitle that wraps to
     /// two lines at the default tier's text width. 16 + 4 + 28.
+    ///
+    /// The two-line figure is measured against the shipped English copy ("Use Add to choose what
+    /// opens from this tile.") — the three shipped locales are all English, so it holds today. A
+    /// longer translation would wrap to three lines and be clipped: if a non-English locale is ever
+    /// added, either raise this or cap the subtitle at two lines.
     static let listEmptyStateTextHeight: CGFloat = 48
+    /// The SHIPPED empty state: the same 13pt title line, with no subtitle under it.
+    static let listEmptyStateShippedTextHeight: CGFloat = 16
     /// The helper popover's trailing utility block (never shown in the editor): a 1pt `Divider`
     /// inside 4pt top/bottom padding, then two `ListMenuRow`s of ~24pt each (a 13pt line inside
     /// 4pt top/bottom padding). 1 + 8 + 48.
@@ -382,17 +389,23 @@ enum PopoverPanelLayout {
     ///
     /// `hasHeader` mirrors `ListPopoverView`'s `if !tileName.isEmpty` — a tile whose name has been
     /// cleared draws no title row, and billing for one leaves a visible gap under the panel.
+    ///
+    /// **`isEditing` is the panel's whole mode**, not one detail of it: the editor drops the trailing
+    /// utility rows and shows a taller two-line empty state, while the shipped popover does the
+    /// reverse. Passing it as one flag keeps those two facts from disagreeing — they were previously
+    /// a `includesUtilityRows` parameter plus an *unstated* assumption that the empty branch was
+    /// always the editor's.
     nonisolated static func listPanelSize(
         metrics: PopoverListMetrics,
         appCount: Int,
-        includesUtilityRows: Bool,
+        isEditing: Bool,
         hasHeader: Bool
     ) -> CGSize {
         let header = hasHeader ? listHeaderHeight : 0
         guard appCount > 0 else {
             let height = header
                 + listEmptyStatePadding * 2
-                + listEmptyStateTextHeight
+                + (isEditing ? listEmptyStateTextHeight : listEmptyStateShippedTextHeight)
                 + listOuterVerticalPadding * 2
             return CGSize(width: metrics.width, height: height)
         }
@@ -402,7 +415,7 @@ enum PopoverPanelLayout {
         )
         let height = header
             + CGFloat(appCount) * rowHeight
-            + (includesUtilityRows ? listUtilityRowsHeight : 0)
+            + (isEditing ? 0 : listUtilityRowsHeight)
             + listOuterVerticalPadding * 2
         return CGSize(width: metrics.width, height: height)
     }

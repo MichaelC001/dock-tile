@@ -176,6 +176,15 @@ Popover, Dock Lock) · Dock Tile (About)** — the old accordion `@AppStorage` e
   band. It lives on only as the leading badge icon for the Settings/About rows in
   `DockTileSidebarView` (`PaneIcon.general` / `.popover` / `.dockLock` / `.about`).
 
+- **One switch size app-wide — 36×16 (`.controlSize(.mini)`)**. Measured, not guessed: `.small`
+  renders 44×20 and stood out against every Settings pane. It is encoded two ways **on purpose**:
+  a labels-hidden toggle in a hand-built row (Tile Detail, Popover) uses the shared
+  `View.tileSwitch()` modifier; a `Form` toggle that carries a text label (General, Dock Lock)
+  sets **nothing** and inherits the Form default, which already renders 36×16. **Never apply
+  `.tileSwitch()` / `.controlSize(.mini)` to a labelled Form toggle** — `controlSize` scales the
+  label typography too, so it would shrink those panes' title and description text. Verify a
+  change by reading the AX frame (`size of every checkbox …`), not by eye.
+
 - **`.tilesPlaceholder` (critical)**: the "No Tiles" row is a **selectable** placeholder that routes
   to the empty-state detail. Without it, once the user opened a Settings pane at zero tiles there was
   no selectable tile row to click back to, stranding them in Settings. First launch and

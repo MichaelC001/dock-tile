@@ -29,7 +29,7 @@ struct PopoverPreviewCanvasTests {
     @Test("Default grid, 6 apps: intrinsic size mirrors the real panel's own frame maths")
     func naturalGridPanelSize() {
         let size = PopoverPreviewCanvas.naturalPanelSize(
-            layout: .grid, appCount: 6, settings: .default, includesUtilityRows: false)
+            layout: .grid, appCount: 6, settings: .default, isEditing: true)
         // 5 cols x 82pt cell + 4 x 14pt gap + 32pt padding = 498 ; 36 header + 2 x 78 + 14 + 32 = 238
         #expect(size == CGSize(width: 498, height: 238))
     }
@@ -37,7 +37,7 @@ struct PopoverPreviewCanvasTests {
     @Test("Default list, 6 apps in the editor: no utility rows in the height")
     func naturalListPanelSize() {
         let size = PopoverPreviewCanvas.naturalPanelSize(
-            layout: .list, appCount: 6, settings: .default, includesUtilityRows: false)
+            layout: .list, appCount: 6, settings: .default, isEditing: true)
         // 32 header + 6 x 36 row + 16 vertical padding = 264
         #expect(size == CGSize(width: 240, height: 264))
     }
@@ -45,7 +45,7 @@ struct PopoverPreviewCanvasTests {
     @Test("A one-app grid is widened so its title fits on one line")
     func naturalGridPanelSizeSingleApp() {
         let size = PopoverPreviewCanvas.naturalPanelSize(
-            layout: .grid, appCount: 1, settings: .default, includesUtilityRows: false)
+            layout: .grid, appCount: 1, settings: .default, isEditing: true)
         // Raw width is one 82pt cell + 32pt padding = 114, of which the header's two 28pt gutters
         // leave ~26pt for the tile name — enough to wrap "New Tile" onto a second line. Floored at
         // 180. Height is unchanged: 36 header + one 78pt row + 32 padding.
@@ -55,7 +55,7 @@ struct PopoverPreviewCanvasTests {
     @Test("Two apps already clear the floor, so their width is untouched")
     func naturalGridPanelSizeTwoApps() {
         let size = PopoverPreviewCanvas.naturalPanelSize(
-            layout: .grid, appCount: 2, settings: .default, includesUtilityRows: false)
+            layout: .grid, appCount: 2, settings: .default, isEditing: true)
         // 2 cols x 82 + 1 x 14 gap + 32 padding = 210, above the 180 floor.
         #expect(size == CGSize(width: 210, height: 146))
     }
@@ -63,7 +63,7 @@ struct PopoverPreviewCanvasTests {
     @Test("Empty grid gets a readable width, not a one-column sliver")
     func naturalGridPanelSizeEmpty() {
         let size = PopoverPreviewCanvas.naturalPanelSize(
-            layout: .grid, appCount: 0, settings: .default, includesUtilityRows: false)
+            layout: .grid, appCount: 0, settings: .default, isEditing: true)
         // Columns are capped at the app count, so the raw width would be one 82pt cell + 32pt
         // padding = 114 — narrow enough to shred the empty state's two lines. Floored at 260.
         #expect(size == CGSize(width: 260, height: 180))
@@ -72,9 +72,26 @@ struct PopoverPreviewCanvasTests {
     @Test("Empty list in the editor: sized for the edit-mode empty state, not a phantom row")
     func naturalListPanelSizeEmpty() {
         let size = PopoverPreviewCanvas.naturalPanelSize(
-            layout: .list, appCount: 0, settings: .default, includesUtilityRows: false)
+            layout: .list, appCount: 0, settings: .default, isEditing: true)
         // 32 header + 32 empty-state vertical padding + 48 title/subtitle + 16 outer padding = 128
         #expect(size == CGSize(width: 240, height: 128))
+    }
+
+    @Test("The shipped list adds its utility rows and a one-line empty state")
+    func listPanelSizeShippedMode() {
+        // `isEditing` is the panel's whole mode: the editor drops the trailing Configure /
+        // Open in Finder rows and shows a two-line empty state; the shipped popover does the
+        // reverse. Both facts move together, so they are pinned together.
+        let metrics = PopoverMetrics.list(popoverSize: .medium, tileSize: .medium, spacing: .comfortable)
+        let populated = PopoverPanelLayout.listPanelSize(
+            metrics: metrics, appCount: 6, isEditing: false, hasHeader: true)
+        // The editor's 264 + the 57pt utility block.
+        #expect(populated == CGSize(width: 240, height: 321))
+
+        let empty = PopoverPanelLayout.listPanelSize(
+            metrics: metrics, appCount: 0, isEditing: false, hasHeader: true)
+        // 32 header + 32 empty-state padding + 16 one-line title + 16 outer padding = 96.
+        #expect(empty == CGSize(width: 240, height: 96))
     }
 
     @Test("A cleared tile name drops the title row from the estimate, not just from the panel")
@@ -82,10 +99,10 @@ struct PopoverPreviewCanvasTests {
         // `ListPopoverView` renders its title row only `if !tileName.isEmpty`. Billing for a row the
         // panel never draws leaves a gap under it inside the canvas.
         let named = PopoverPreviewCanvas.naturalPanelSize(
-            layout: .list, appCount: 6, settings: .default, includesUtilityRows: false,
+            layout: .list, appCount: 6, settings: .default, isEditing: true,
             hasHeader: true)
         let unnamed = PopoverPreviewCanvas.naturalPanelSize(
-            layout: .list, appCount: 6, settings: .default, includesUtilityRows: false,
+            layout: .list, appCount: 6, settings: .default, isEditing: true,
             hasHeader: false)
         #expect(named == CGSize(width: 240, height: 264))
         // 264 - the 32pt header row.
@@ -95,7 +112,7 @@ struct PopoverPreviewCanvasTests {
     @Test("An unnamed empty list loses the header row too")
     func naturalListPanelSizeEmptyWithoutHeader() {
         let size = PopoverPreviewCanvas.naturalPanelSize(
-            layout: .list, appCount: 0, settings: .default, includesUtilityRows: false,
+            layout: .list, appCount: 0, settings: .default, isEditing: true,
             hasHeader: false)
         // 128 - the 32pt header row.
         #expect(size == CGSize(width: 240, height: 96))

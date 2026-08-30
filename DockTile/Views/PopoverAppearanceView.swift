@@ -298,9 +298,7 @@ struct PopoverAppearanceView: View {
                     .foregroundStyle(.secondary)
             } else {
                 Toggle("", isOn: showLabels)
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                    .controlSize(.mini)
+                    .tileSwitch()
             }
         }
         .padding(.horizontal, 14)
@@ -340,9 +338,7 @@ struct PopoverAppearanceView: View {
                 .foregroundStyle(.primary)
             Spacer()
             Toggle("", isOn: isOn)
-                .labelsHidden()
-                .toggleStyle(.switch)
-                .controlSize(.mini)
+                .tileSwitch()
         }
         .padding(.horizontal, 14)
         .frame(minHeight: 40)
@@ -544,7 +540,7 @@ struct PopoverPreviewCanvas: View {
             layout: layout,
             appCount: configuration.appItems.count,
             settings: settings ?? PopoverSettings.load(layout: layout),
-            includesUtilityRows: layout == .list && editing == nil,
+            isEditing: editing != nil,
             // Mirrors `ListPopoverView.tileName` — a cleared name draws no title row.
             hasHeader: !configuration.name.isEmpty,
             // Mirrors `StackPopoverView.showsMissingCaption` — the editor's "Not installed"
@@ -586,7 +582,7 @@ struct PopoverPreviewCanvas: View {
         layout: LayoutMode,
         appCount: Int,
         settings: PopoverSettings,
-        includesUtilityRows: Bool,
+        isEditing: Bool,
         hasHeader: Bool = true,
         includesMissingCaption: Bool = false
     ) -> CGSize {
@@ -610,7 +606,7 @@ struct PopoverPreviewCanvas: View {
                                              tileSize: settings.tileSize,
                                              spacing: settings.spacing),
                 appCount: appCount,
-                includesUtilityRows: includesUtilityRows,
+                isEditing: isEditing,
                 hasHeader: hasHeader
             )
         }
@@ -668,7 +664,7 @@ struct PopoverPreviewCanvas: View {
             return PopoverPanelLayout.listPanelSize(
                 metrics: PopoverMetrics.list(popoverSize: .large, tileSize: .large, spacing: .spacious),
                 appCount: apps,
-                includesUtilityRows: true,
+                isEditing: false,
                 hasHeader: true
             )
         }

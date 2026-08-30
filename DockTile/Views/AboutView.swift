@@ -131,7 +131,7 @@ struct AboutPaneView: View {
                 ForEach(tiles) { DockTileIconPreview.fromConfig($0, size: 48) }
             }
             Divider().frame(height: 40)
-            Image(nsImage: NSWorkspace.shared.icon(for: .folder)).resizable().frame(width: 48, height: 48)
+            Image(nsImage: VendorMark.folderIcon).resizable().frame(width: 48, height: 48)
         }
         .padding(.horizontal, 12).padding(.vertical, 8)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -170,21 +170,31 @@ struct AboutPaneView: View {
 /// layout bug rather than a missing asset.
 enum VendorMark {
 
+    /// Decoded once each, not per body evaluation — a SwiftUI view's `body` runs on every render,
+    /// and these were re-reading and re-decoding their files each time.
+    ///
     /// Happy Machines: a single monochrome stroke, so it ships as ONE vector and is drawn as a
     /// template tinted to the current foreground — no light/dark pair to keep in sync.
-    static var happyMachines: NSImage? {
+    static let happyMachines: NSImage? = {
         guard let url = Bundle.main.url(forResource: "HappyMachinesLogo", withExtension: "svg"),
               let image = NSImage(contentsOf: url) else { return nil }
         image.isTemplate = true
         return image
-    }
+    }()
 
     /// Spades ships a full-colour app icon, so it can't be tinted — it takes the light or dark
-    /// rendition the way the Dock would.
-    static func spades(dark: Bool) -> NSImage? {
-        Bundle.main.url(forResource: dark ? "SpadesIconDark" : "SpadesIconLight", withExtension: "png")
-            .flatMap(NSImage.init(contentsOf:))
+    /// rendition the way the Dock would. Both are held; the pane switches between them on theme.
+    private static let spadesLight = load("SpadesIconLight")
+    private static let spadesDark = load("SpadesIconDark")
+
+    static func spades(dark: Bool) -> NSImage? { dark ? spadesDark : spadesLight }
+
+    private static func load(_ name: String) -> NSImage? {
+        Bundle.main.url(forResource: name, withExtension: "png").flatMap(NSImage.init(contentsOf:))
     }
+
+    /// The system folder icon in the About hero — resolved once for the same reason.
+    static let folderIcon: NSImage = NSWorkspace.shared.icon(for: .folder)
 }
 
 /// Happy Machines' mark, tinted to the foreground; the smiling-face symbol if the asset is absent.
