@@ -165,24 +165,15 @@ struct DockTileConfigurationView: View {
         }
     }
 
-    /// The + toolbar action. Computes on-device suggestions: if any, present the Smart Add sheet;
-    /// otherwise fall through to today's blank-tile flow unchanged.
+    /// The + toolbar action (and every other add entry point). The Add a Tile dialog always
+    /// opens — the blank row is the first thing you see. Smart Add only decides whether the
+    /// dialog's suggestions are populated, never whether the dialog appears.
     private func handleAddTapped() {
-        // Smart Add off → always the blank-tile flow.
-        guard smartAddEnabled else {
-            DiagnosticsLog.shared.ui("+ pressed (Smart Add off) → new blank tile")
-            configManager.createConfiguration()
-            return
-        }
-
-        let suggestions = smartAddEngine.computeSuggestions(existing: configManager.configurations)
-        if suggestions.isEmpty {
-            DiagnosticsLog.shared.ui("+ pressed → no suggestions, new blank tile")
-            configManager.createConfiguration()
-        } else {
-            DiagnosticsLog.shared.ui("+ pressed → Smart Add sheet with \(suggestions.count) suggestion(s)")
-            smartAddPresentation = SmartAddPresentation(suggestions: suggestions)
-        }
+        let computed = smartAddEnabled
+            ? smartAddEngine.computeSuggestions(existing: configManager.configurations) : []
+        let suggestions = SmartAddEngine.suggestionsForAddFlow(enabled: smartAddEnabled, computed: computed)
+        DiagnosticsLog.shared.ui("+ pressed → Add a Tile dialog (\(suggestions.count) suggestion(s), smartAdd=\(smartAddEnabled))")
+        smartAddPresentation = SmartAddPresentation(suggestions: suggestions)
     }
 
     @ViewBuilder
@@ -342,7 +333,7 @@ struct EmptyConfigurationView: View {
             Text(AppStrings.Empty.createFirstTileDescription)
         } actions: {
             Button(action: onAdd) {
-                Label(AppStrings.Button.newTile, systemImage: "plus")
+                Label(AppStrings.Button.addATile, systemImage: "plus")
             }
             .buttonStyle(.borderedProminent)
         }

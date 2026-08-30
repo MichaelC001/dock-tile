@@ -2808,6 +2808,126 @@
           }
         }
       }
+    },
+    "smartAdd.blankTitle": {
+      "comment": "Add a Tile: blank row title",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create a blank tile"
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create a blank tile"
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create a blank tile"
+          }
+        }
+      }
+    },
+    "smartAdd.blankSubtitle": {
+      "comment": "Add a Tile: blank row subtitle",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name it, pick an icon and add apps yourself."
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name it, pick an icon and add apps yourself."
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name it, pick an icon and add apps yourself."
+          }
+        }
+      }
+    },
+    "smartAdd.orStartFrom": {
+      "comment": "Add a Tile: rule between blank row and suggestions",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "or start from what you use"
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "or start from what you use"
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "or start from what you use"
+          }
+        }
+      }
+    },
+    "smartAdd.noSuggestions": {
+      "comment": "Add a Tile: empty suggestions note",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No suggestions yet — Dock Tile learns from the apps you open. You can turn this off in General."
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No suggestions yet — Dock Tile learns from the apps you open. You can turn this off in General."
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No suggestions yet — Dock Tile learns from the apps you open. You can turn this off in General."
+          }
+        }
+      }
+    },
+    "empty.createFirstTileDescriptionV2": {
+      "comment": "Zero-tiles description",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Group apps and folders behind one Dock icon. Start blank, or from a tile suggested from the apps you use."
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Group apps and folders behind one Dock icon. Start blank, or from a tile suggested from the apps you use."
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Group apps and folders behind one Dock icon. Start blank, or from a tile suggested from the apps you use."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

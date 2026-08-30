@@ -80,6 +80,10 @@ struct AppStringsTests {
 
         // Smart Add
         #expect(AppStrings.SmartAdd.settingsToggleTitle == "Suggest tiles from my apps")
+        #expect(!AppStrings.SmartAdd.blankTitle.isEmpty)
+        #expect(!AppStrings.SmartAdd.blankSubtitle.isEmpty)
+        #expect(!AppStrings.SmartAdd.orStartFrom.isEmpty)
+        #expect(!AppStrings.SmartAdd.noSuggestions.isEmpty)
 
         // Tooltips
         #expect(!AppStrings.Tooltip.openSettings.isEmpty)

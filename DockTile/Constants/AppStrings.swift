@@ -900,10 +900,28 @@ enum AppStrings {
             comment: "Header title of the Smart Add suggestion sheet"
         )
 
-        static let subtitle = NSLocalizedString(
-            "smartAdd.subtitle",
-            value: "Pick a tile to start from — you can rename it, restyle it and change the apps next.",
-            comment: "Header subtitle of the Smart Add suggestion sheet"
+        static let blankTitle = NSLocalizedString(
+            "smartAdd.blankTitle",
+            value: "Create a blank tile",
+            comment: "Add a Tile: blank row title"
+        )
+
+        static let blankSubtitle = NSLocalizedString(
+            "smartAdd.blankSubtitle",
+            value: "Name it, pick an icon and add apps yourself.",
+            comment: "Add a Tile: blank row subtitle"
+        )
+
+        static let orStartFrom = NSLocalizedString(
+            "smartAdd.orStartFrom",
+            value: "or start from what you use",
+            comment: "Add a Tile: rule between blank row and suggestions"
+        )
+
+        static let noSuggestions = NSLocalizedString(
+            "smartAdd.noSuggestions",
+            value: "No suggestions yet — Dock Tile learns from the apps you open. You can turn this off in General.",
+            comment: "Add a Tile: empty suggestions note"
         )
 
         static let privacyFootnote = NSLocalizedString(
@@ -1057,9 +1075,9 @@ enum AppStrings {
         )
 
         static let createFirstTileDescription = NSLocalizedString(
-            "empty.createFirstTileDescription",
-            value: "Group your favourite apps into a tile and pin it to the Dock.",
-            comment: "Supporting text under the empty-state header"
+            "empty.createFirstTileDescriptionV2",
+            value: "Group apps and folders behind one Dock icon. Start blank, or from a tile suggested from the apps you use.",
+            comment: "Zero-tiles description"
         )
 
         static let detail = NSLocalizedString(
