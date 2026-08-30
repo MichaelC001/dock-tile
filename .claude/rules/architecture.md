@@ -100,7 +100,9 @@ without ever calling HelperBundleManager, skips the Dock-restart consent dialog,
 until new edits (`contentSignature` dirty tracking, which ignores `lastDockIndex` /
 `helperAppVersion` / `isVisibleInDock` bookkeeping). While processing, the button shows the spinner
 **inside** itself (same pattern as the Popover Appearance Save button), not a separate toolbar
-spinner. Guarded by `DockActionResolutionTests`.
+spinner. Guarded by `DockActionResolutionTests`. The button lives in the title band
+(`ToolbarItemGroup(.primaryAction)`, trailing the trash/Delete Tile icon); install actions render
+`.borderedProminent`, remove/saveOnly render `.bordered`.
 
 ## Dock Position Preservation
 
@@ -123,15 +125,23 @@ spinner. Guarded by `DockActionResolutionTests`.
 The main window's `SidebarSelection` (a tile, a Settings pane, or the `.tilesPlaceholder`
 "No Tiles" row) is the single source of truth driving the detail column; tile selection mirrors
 into `ConfigurationManager.selectedConfigId`. Both the empty state and Settings live in the same
-detail column, so navigation invariants matter:
+detail column, so navigation invariants matter.
+
+**v2 chrome**: the window has no title and no sidebar toggle (`.toolbar(removing: .title)` /
+`.toolbar(removing: .sidebarToggle)` on `DockTileConfigurationView`, belt-and-braced on the
+sidebar column itself) — the 52pt title band IS the page header (`paneTitleBand`, see "Tile
+editor" below), and it carries the pane's **title text only, no pane icon**. The sidebar is three
+**static** sections — **Tiles · Settings (General, Popover, Dock Lock) · Dock Tile (About)** — the
+old accordion `@AppStorage` expand state is gone.
 
 - **`.tilesPlaceholder` (critical)**: the "No Tiles" row is a **selectable** placeholder that routes
   to the empty-state detail. Without it, once the user opened a Settings pane at zero tiles there was
   no selectable tile row to click back to, stranding them in Settings. First launch and
   last-tile-deletion both default `selection` to it, so the empty state (not a Settings pane) is what
-  appears. `EmptyConfigurationView` takes an `onAdd` closure wired to the **same** `handleAddTapped`
-  as the sidebar + (Smart Add if suggestions exist, else a blank tile) — the two entry points must
-  not diverge.
+  appears. `EmptyConfigurationView`'s single **Add a Tile…** action wires to the **same**
+  `handleAddTapped` as the sidebar + — every add entry point now opens the Smart Add dialog
+  unconditionally (see smart-add.md "The + flow (v2: the dialog always opens)") — the entry points
+  must not diverge.
 - **+ gate must never deadlock (critical)**: the toolbar + is gated by the pure
   `ConfigurationManager.canCreateNewTile(hasSelection:selectedEdited:)` seam — disabled **only** while
   an unedited freshly-created tile is *selected*, always enabled when there's no selection. Gating on
@@ -139,6 +149,33 @@ detail column, so navigation invariants matter:
   (the flag stayed `false` with zero tiles, nothing to edit to flip it back). `deleteConfiguration`
   also resets the flag to `true` when the list empties so the stored value stays honest. Guarded by
   `ConfigurationManagerTests`.
+
+## Tile editor = the real popover (critical)
+
+"In This Tile" (Tile Detail) renders `PopoverPreviewCanvas` — the wallpaper canvas around the SAME
+`StackPopoverView` / `ListPopoverView` helpers ship — with `PopoverEditing(onRemove:onMove:)`
+handlers: hover ×, context-menu Remove, Delete key, VoiceOver Remove action, drag reorder via
+`PopoverItemDropDelegate`. `editing` is `nil` in helpers and the Popover settings preview — the
+panels' shipped rendering is untouched **by construction**: the shared modifiers
+(`editingOnly`/`removeAffordances`/`reorderable`) live inside `if let editing` branches whose
+`else` is bare `self`. `editing != nil` implies `isPreview` (no app launches, no configurator jump)
+so an editor click can never fire a real action. Reorder/remove go through the pure `AppListEditor`
+seam (`.removing(_:from:)` / `.moving(_:onto:in:)`, `AppListEditorTests`). Adding apps stays the
+native `NSOpenPanel` (multi-select, unchanged). There is no apps table any more; do not reintroduce
+one.
+
+`PopoverPreviewCanvas`'s `.id`-equivalent re-render key (`signature`) must **not** include the app
+list — `configuration` is a value type, so add/remove/reorder already re-renders the embedded panel
+without a new view identity, while keying on the list would destroy-and-rebuild it mid-edit and
+drop an in-flight drag or keyboard focus.
+
+## About pane
+
+The sidebar's "Dock Tile" section routes to `AboutPaneView` ([AboutView.swift](../../DockTile/Views/AboutView.swift)),
+which replaced the old detached `AboutWindowController` window — About is now a pane in the same
+detail column as tiles and Settings, not a separate window. It is the **only** home of Software
+Update (moved out of General). `AboutLinks.feedback` reads Info.plist `DTFeedbackEmail` (mailto:)
+when set, falling back to the website — the key is intentionally left unset today.
 
 ## Popover Configure Gear Icon
 

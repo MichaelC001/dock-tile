@@ -2,9 +2,18 @@
 
 App-wide controls for how every tile's Dock popover looks — Popover Size, Tile Size, Animation,
 Spacing, Highlight on Hover, plus Grid-only Show Labels. **Grid and List are configured
-independently** (see below). Reached via **Settings → General → Appearance** — a `NavigationStack`
-drill-down inside `GeneralSettingsView` (NOT a separate sidebar pane), titled "Appearance" with a
-"‹ General" back. Per-tile Grid/List (which layout a tile uses) still lives on Tile Detail.
+independently** (see below). Reached via **Settings → Popover** — a **top-level sidebar pane**
+(`PaneIcon.popover`), not a `GeneralSettingsView` drill-down; the old "Appearance" back-navigation
+is gone. Reset/Save are `.primaryAction` toolbar items riding in the pane's title band (see
+architecture.md "Sidebar Selection & Empty State" for the title-band chrome). Per-tile Grid/List
+(which layout a tile uses) still lives on Tile Detail.
+
+- **Hero = `PopoverPreviewCanvas` (critical)**: the live preview is `PopoverPreviewCanvas(fit:
+  .worstCase(height: 300))` — the SAME component Tile Detail's tile editor uses with `.natural` and
+  an `editing` handler (see architecture.md "Tile editor = the real popover"); here `editing` is
+  omitted (defaults `nil`) so it renders exactly as the real popover ships. `PopoverPreviewCanvas.fitScale` is
+  the pure zoom seam that scales the fixed-size real panel into the `.worstCase` frame, guarded by
+  `PopoverPreviewCanvasTests`.
 
 - **Per-layout, independent configs (critical)**: Grid and List are configured **separately** —
   `PopoverSettings.load(layout:)` / `.persist(layout:)` read/write a distinct key namespace per
