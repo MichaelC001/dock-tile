@@ -492,6 +492,13 @@ struct PopoverPreviewCanvas: View {
 
     private let cornerRadius: CGFloat = 14
 
+    /// The `.natural` fit's outer inset. One constant so the fit maths and the padding can't drift.
+    private static let naturalInset: CGFloat = 22
+
+    /// Height the `.natural` container reserves, published from inside its `GeometryReader` (which
+    /// is the only place the real available width is known) and read back for the outer frame.
+    @State private var naturalHeight: CGFloat? = nil
+
     nonisolated static func fitScale(available: CGSize, worst: CGSize) -> CGFloat {
         let fit = min((available.width - 56) / worst.width, (available.height - 44) / worst.height)
         let rawFit = min((available.width - 8) / worst.width, (available.height - 8) / worst.height)
@@ -502,9 +509,7 @@ struct PopoverPreviewCanvas: View {
         Group {
             switch fit {
             case .natural:
-                chrome
-                    .padding(22)
-                    .frame(maxWidth: .infinity)
+                naturalFit
             case .worstCase(let height):
                 GeometryReader { proxy in
                     let scale = Self.fitScale(available: proxy.size, worst: Self.worstCasePanelSize(for: layout, appCount: configuration.appItems.count))
@@ -521,6 +526,76 @@ struct PopoverPreviewCanvas: View {
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
             .strokeBorder(Color(nsColor: .separatorColor).opacity(0.6), lineWidth: 0.5))
+    }
+
+    /// The `.natural` fit: the real panel at 1:1 when it fits, scaled DOWN to fit when it doesn't.
+    ///
+    /// `StackPopoverView` pins itself to a fixed `popoverWidth` (columns x cell width), so a tile
+    /// with several apps is WIDER than the fixed-width window's detail column. `.scaleEffect` alone
+    /// does **not** change a view's layout size — scaling without also pinning the frame to the
+    /// scaled size left the column still claiming the panel's full intrinsic width, which stretched
+    /// the enclosing VStack and pushed the section header's controls (layout picker, + Add) off the
+    /// window where they were clipped. So the LAYOUT width/height must be the SCALED size, and the
+    /// width must come from a `GeometryReader` (which always reports the width it was *proposed*,
+    /// and so can never be inflated by its own oversized content). Never scales above 1: a small
+    /// tile still renders exactly 1:1.
+    private var naturalFit: some View {
+        let panelSize = Self.naturalPanelSize(
+            layout: layout,
+            appCount: configuration.appItems.count,
+            settings: settings ?? PopoverSettings.load(layout: layout),
+            includesUtilityRows: layout == .list && editing == nil
+        )
+        return GeometryReader { proxy in
+            let scale = Self.naturalScale(availableWidth: proxy.size.width, panelWidth: panelSize.width)
+            let height = panelSize.height * scale + Self.naturalInset * 2
+            chrome
+                .fixedSize()
+                .scaleEffect(scale, anchor: .center)
+                .frame(width: proxy.size.width, height: height)
+                .preference(key: NaturalCanvasHeightKey.self, value: height)
+        }
+        .frame(height: naturalHeight ?? (panelSize.height + Self.naturalInset * 2))
+        .onPreferenceChange(NaturalCanvasHeightKey.self) { naturalHeight = $0 }
+    }
+
+    /// Scale that fits `panelWidth` (plus the canvas inset on both sides) into `availableWidth`,
+    /// clamped so the panel is never blown UP. A non-positive width (the first layout pass, before
+    /// the GeometryReader has a proposal) falls back to 1:1.
+    nonisolated static func naturalScale(availableWidth: CGFloat, panelWidth: CGFloat) -> CGFloat {
+        let usable = availableWidth - naturalInset * 2
+        guard usable > 0, panelWidth > 0 else { return 1 }
+        return min(1, usable / panelWidth)
+    }
+
+    /// The panel's intrinsic layout size for the ACTUAL settings and app count — mirrors exactly how
+    /// `StackPopoverView` / `ListPopoverView` size themselves, through `PopoverMetrics` only (the
+    /// single sizing seam). Guarded by `PopoverPreviewCanvasTests`.
+    nonisolated static func naturalPanelSize(
+        layout: LayoutMode,
+        appCount: Int,
+        settings: PopoverSettings,
+        includesUtilityRows: Bool
+    ) -> CGSize {
+        switch layout {
+        case .grid:
+            let m = PopoverMetrics.grid(popoverSize: settings.popoverSize, tileSize: settings.tileSize,
+                                        spacing: settings.spacing, showLabels: settings.showLabels)
+            let cols = max(1, min(m.columns, max(1, appCount)))
+            let width = m.cellWidth * CGFloat(cols) + m.gap * CGFloat(cols - 1) + 32
+            guard appCount > 0 else { return CGSize(width: width, height: 180) }
+            let rows = Int(ceil(Double(appCount) / Double(cols)))
+            let itemHeight = m.iconSize + (settings.showLabels ? 18 : 0) + 4
+            let height = 36 + CGFloat(rows) * itemHeight + CGFloat(rows - 1) * m.gap + 32
+            return CGSize(width: width, height: height)
+        case .list:
+            let m = PopoverMetrics.list(popoverSize: settings.popoverSize, tileSize: settings.tileSize,
+                                        spacing: settings.spacing)
+            let rowHeight = max(28, max(m.iconSize, m.fontSize + 3) + m.rowVerticalPadding * 2)
+            let utility: CGFloat = includesUtilityRows ? 51 : 0
+            let height = 32 + CGFloat(max(1, appCount)) * rowHeight + utility + 16
+            return CGSize(width: m.width, height: height)
+        }
     }
 
     @ViewBuilder private var panel: some View {
@@ -567,5 +642,13 @@ struct PopoverPreviewCanvas: View {
             let h = 33 + CGFloat(max(1, count)) * rowH + 9 + 42 + 16
             return CGSize(width: m.width, height: h)
         }
+    }
+}
+
+/// Publishes the `.natural` canvas height out of its `GeometryReader` (see `naturalFit`).
+private struct NaturalCanvasHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat? = nil
+    static func reduce(value: inout CGFloat?, nextValue: () -> CGFloat?) {
+        value = nextValue() ?? value
     }
 }

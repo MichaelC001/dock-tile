@@ -23,4 +23,39 @@ struct PopoverPreviewCanvasTests {
         // fit = (144-44)/100 = 1.0 → 1.1 ; rawFit = (144-8)/100 = 1.36 ; cap 1.04 → 1.04
         #expect(s == 1.04)
     }
+
+    // MARK: - `.natural` fit (Tile Detail editor) — must never overflow the fixed-width window
+
+    @Test("Default grid, 6 apps: intrinsic size mirrors the real panel's own frame maths")
+    func naturalGridPanelSize() {
+        let size = PopoverPreviewCanvas.naturalPanelSize(
+            layout: .grid, appCount: 6, settings: .default, includesUtilityRows: false)
+        // 5 cols x 82pt cell + 4 x 14pt gap + 32pt padding = 498 ; 36 header + 2 x 78 + 14 + 32 = 238
+        #expect(size == CGSize(width: 498, height: 238))
+    }
+
+    @Test("Default list, 6 apps in the editor: no utility rows in the height")
+    func naturalListPanelSize() {
+        let size = PopoverPreviewCanvas.naturalPanelSize(
+            layout: .list, appCount: 6, settings: .default, includesUtilityRows: false)
+        // 32 header + 6 x 36 row + 16 vertical padding = 264
+        #expect(size == CGSize(width: 240, height: 264))
+    }
+
+    @Test("A panel wider than the detail column scales DOWN to fit flush")
+    func naturalScaleShrinksOverflowingPanel() {
+        let s = PopoverPreviewCanvas.naturalScale(availableWidth: 488, panelWidth: 498)
+        // (488 - 2 x 22 inset) / 498
+        #expect(abs(s - 0.891566) < 0.0001)
+    }
+
+    @Test("A panel that already fits renders 1:1 — never blown up")
+    func naturalScaleNeverUpscales() {
+        #expect(PopoverPreviewCanvas.naturalScale(availableWidth: 488, panelWidth: 210) == 1)
+    }
+
+    @Test("Before the first layout pass (no proposal yet) the fit falls back to 1:1")
+    func naturalScaleWithoutProposal() {
+        #expect(PopoverPreviewCanvas.naturalScale(availableWidth: 0, panelWidth: 498) == 1)
+    }
 }
