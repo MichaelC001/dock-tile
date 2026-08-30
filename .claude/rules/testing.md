@@ -48,6 +48,7 @@ it, and unit-test the seam so a broken rule fails loudly. Existing seams: `resol
 `FloatingPanel.resolveAnchor` / `DockPrefs.resolve` (popover pin point — magnification `largesize+25` envelope, autohide tilesize fallback, orientation from pref; guarded by `FloatingPanelAnchorTests`),
 `AppListEditor.removing(_:from:)` / `.moving(_:onto:in:)` (tile editor's remove/reorder reducer, guarded by `AppListEditorTests`),
 `PopoverPreviewCanvas.fitScale` (hero zoom that scales the fixed-size real popover into a `.worstCase` frame, guarded by `PopoverPreviewCanvasTests`),
+`PopoverPanelLayout.gridPanelSize` / `.listPanelSize` (the panel size formulas shared by the real panels and the editor canvas — the list pins only its width, so an undershoot here CLIPS the panel),
 `SmartAddEngine.suggestionsForAddFlow` (the add dialog always opens; the Smart Add toggle only filters what it shows),
 `ConfigurationDefaults.iconValue` (new tiles default to the `"plus"` placeholder glyph, not a category icon).
 

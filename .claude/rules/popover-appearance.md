@@ -59,6 +59,14 @@ architecture.md "Sidebar Selection & Empty State" for the title-band chrome). Pe
   column count (Small 4 / Medium 5 / Large 6) **capped at the app count** so few-app tiles stay tight
   — meaning Popover Size is a visual no-op for a tile with ≤4 apps (the preview uses 6 sample apps so
   all three tiers differ). Animation is forced to 0 when system Reduce Motion is on.
+- **Pure panel-geometry seam** (`PopoverPanelLayout`, in the same file): the chrome constants and the
+  grid/list **size formulas**, one level above `PopoverMetrics`. `StackPopoverView.popoverWidth` /
+  `.calculateHeight`, `ListPopoverView`'s paddings AND `PopoverPreviewCanvas.naturalPanelSize` all
+  read it. **Why it must stay single (critical)**: the grid pins its own width and height, but
+  `ListPopoverView` pins only its **width** and takes an intrinsic height, so the canvas's estimate
+  is load-bearing — the canvas frames the panel and clips to that frame, and an underestimate cuts
+  the panel off. Two copies of the list formula did drift exactly there: the empty-tile case billed
+  one 36pt row against a ~110pt empty state, clipping the tile-name header and the hint.
 - **Applied to real helper popovers** (per-tile by layout): `LauncherView` routes each helper to
   `StackPopoverView` (grid tiles) or `ListPopoverView` (list tiles) by the tile's own
   `layoutMode`; each reads its own config via `PopoverSettings.load(layout:)` (grid tiles `.grid`,
