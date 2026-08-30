@@ -15,11 +15,15 @@ enum AboutLinks {
     static let studio  = URL(string: "https://happymachines.company/")!
     static let spades  = URL(string: "https://spadesaudio.com/")!
     static var feedback: URL {
-        if let email = Bundle.main.object(forInfoDictionaryKey: "DTFeedbackEmail") as? String,
-           !email.isEmpty, let url = URL(string: "mailto:\(email)?subject=Dock%20Tile%20feedback") {
-            return url
-        }
-        return website
+        guard let email = Bundle.main.object(forInfoDictionaryKey: "DTFeedbackEmail") as? String,
+              !email.isEmpty else { return website }
+        // Build through URLComponents rather than interpolating: the address comes from Info.plist,
+        // and an unencoded subject or a stray character would silently yield a nil URL.
+        var components = URLComponents()
+        components.scheme = "mailto"
+        components.path = email
+        components.queryItems = [URLQueryItem(name: "subject", value: "Dock Tile feedback")]
+        return components.url ?? website
     }
 }
 

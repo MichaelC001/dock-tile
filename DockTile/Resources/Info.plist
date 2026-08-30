@@ -35,6 +35,8 @@
 	<string>$(ASSETCATALOG_COMPILER_APPICON_NAME)</string>
 	<key>DTEnvironment</key>
 	<string>$(DOCKTILE_ENVIRONMENT)</string>
+	<key>DTFeedbackEmail</key>
+	<string>hello@happymachines.company</string>
 	<key>DTHelperPrefix</key>
 	<string>$(DOCKTILE_HELPER_PREFIX)</string>
 	<key>DTPrefsFilename</key>

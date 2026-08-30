@@ -202,8 +202,11 @@ drop an in-flight drag or keyboard focus.
 The sidebar's "Dock Tile" section routes to `AboutPaneView` ([AboutView.swift](../../DockTile/Views/AboutView.swift)),
 which replaced the old detached `AboutWindowController` window — About is now a pane in the same
 detail column as tiles and Settings, not a separate window. It is the **only** home of Software
-Update (moved out of General). `AboutLinks.feedback` reads Info.plist `DTFeedbackEmail` (mailto:)
-when set, falling back to the website — the key is intentionally left unset today.
+Update (moved out of General). `AboutLinks.feedback` reads Info.plist `DTFeedbackEmail` (mailto:,
+built through `URLComponents` so the subject is encoded), falling back to the website when the key
+is absent or the URL can't be built. That fallback is **silent and looks like the Website row**
+while the copy still promises the message reaches the developer, so `AboutLinksTests` pins both the
+shipped address (`hello@happymachines.company`) and the exact mailto the button opens.
 
 ## Popover Configure Gear Icon
 
