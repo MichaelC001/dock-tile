@@ -36,7 +36,7 @@ Entitlements in `DockTile/DockTile.entitlements`:
 ## Sparkle Auto-Updates
 
 - Sparkle 2.9.0 via SPM, EdDSA (Ed25519) signing
-- Appcast at `https://docktile.rkarthik.co/appcast.xml`
+- Appcast at `https://docktile.app/appcast.xml`
 - Helper bundles have Sparkle keys stripped to prevent update conflicts
 - `UpdateController.swift` wraps SPUUpdater with error-handling delegate; publishes `canCheckForUpdates`
   (KVO via Combine) so the Settings → General **Check for Updates…** button disables mid-session

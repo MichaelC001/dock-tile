@@ -306,6 +306,10 @@ enum PopoverPanelLayout {
     static let gridPadding: CGFloat = 16
     /// Height of the grid's own "no apps" state.
     static let gridEmptyHeight: CGFloat = 180
+    /// Floor for the EMPTY grid panel's width. Column count is capped at the app count, so a tile
+    /// with no apps would otherwise be a single 82pt column — a sliver the empty state's two lines
+    /// wrap to shreds inside.
+    static let gridEmptyMinWidth: CGFloat = 260
     /// The real popover scrolls past this; the editor does not (Tile Detail scrolls instead).
     static let gridScrollCap: CGFloat = 600
     /// Label line under a grid cell when Show Labels is on: a 4pt gap + one 14pt line.
@@ -322,8 +326,9 @@ enum PopoverPanelLayout {
     static let listOuterVerticalPadding: CGFloat = 8
     /// `emptyStateView`'s own vertical padding, top and bottom.
     static let listEmptyStatePadding: CGFloat = 16
-    /// Two 12pt lines: the edit-mode "no apps yet" copy wraps at the default tier's text width.
-    static let listEmptyStateTextHeight: CGFloat = 30
+    /// The edit-mode empty state: a 13pt title line, 4pt spacing, and an 11pt subtitle that wraps to
+    /// two lines at the default tier's text width. 16 + 4 + 28.
+    static let listEmptyStateTextHeight: CGFloat = 48
     /// The helper popover's two trailing utility rows (never shown in the editor).
     static let listUtilityRowsHeight: CGFloat = 51
     static let listRowMinHeight: CGFloat = 28
@@ -345,7 +350,9 @@ enum PopoverPanelLayout {
         let width = metrics.cellWidth * CGFloat(cols)
             + metrics.gap * CGFloat(cols - 1)
             + gridPadding * 2
-        guard appCount > 0 else { return CGSize(width: width, height: gridEmptyHeight) }
+        guard appCount > 0 else {
+            return CGSize(width: max(width, gridEmptyMinWidth), height: gridEmptyHeight)
+        }
         let rows = Int(ceil(Double(appCount) / Double(cols)))
         let itemHeight = metrics.iconSize + (showLabels ? gridLabelHeight : 0) + gridCellPadding
         let height = gridHeaderHeight

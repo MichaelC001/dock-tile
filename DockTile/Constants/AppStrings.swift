@@ -32,6 +32,9 @@ enum AppStrings {
         static let feedbackTitle = NSLocalizedString("about.feedbackTitle", value: "Found a bug or have an idea?", comment: "About: feedback card title")
         static let feedbackBody = NSLocalizedString("about.feedbackBody", value: "Feedback goes straight to the developer. Diagnostics attach a log of what the app and its tiles did — nothing personal.", comment: "About: feedback card body")
         static let sendFeedback = NSLocalizedString("about.sendFeedback", value: "Send Feedback…", comment: "About: opens the feedback email")
+        static let feedbackRowBody = NSLocalizedString("about.feedbackRowBody", value: "Feedback goes straight to the developer.", comment: "About: Send Feedback row description.")
+        static let diagnosticsTitle = NSLocalizedString("about.diagnosticsTitle", value: "Diagnostics", comment: "About: Copy Diagnostics row label.")
+        static let diagnosticsBody = NSLocalizedString("about.diagnosticsBody", value: "A log of what the app and its tiles did. Attach it to an email when something looks wrong — it contains nothing personal.", comment: "About: Copy Diagnostics row description.")
         static let alsoFrom = NSLocalizedString("about.alsoFrom", value: "Also from Happy Machines", comment: "About: studio section header")
         static let studioTitle = NSLocalizedString("about.studioTitle", value: "Made by Happy Machines Company", comment: "About: studio row title")
         static let studioSubtitle = NSLocalizedString("about.studioSubtitle", value: "A tiny product studio building nifty Mac apps that each fix one thing well.", comment: "About: studio row subtitle")
@@ -138,6 +141,8 @@ enum AppStrings {
         )
 
         static let addATile = NSLocalizedString("button.addATile", value: "Add a Tile…", comment: "Sidebar + / empty state: opens the Add a Tile dialog")
+
+        static let copy = NSLocalizedString("button.copy", value: "Copy", comment: "Generic Copy button label.")
 
         static let addToDock = NSLocalizedString(
             "button.addToDock",
@@ -764,10 +769,17 @@ enum AppStrings {
             value: "Remove",
             comment: "Context menu / remove badge in the tile editor"
         )
-        static let editingNoAppsYet = NSLocalizedString(
-            "popover.editing.noAppsYet",
-            value: "No apps yet. Use Add to choose what opens from this tile.",
-            comment: "Tile editor empty state"
+        /// Split into title + subtitle so the editor's empty panel reads as two short lines
+        /// instead of one sentence wrapping four times in a narrow column.
+        static let editingNoAppsTitle = NSLocalizedString(
+            "popover.editing.noAppsTitle",
+            value: "No apps yet",
+            comment: "Tile editor: empty popover preview, title line."
+        )
+        static let editingNoAppsSubtitle = NSLocalizedString(
+            "popover.editing.noAppsSubtitle",
+            value: "Use Add to choose what opens from this tile.",
+            comment: "Tile editor: empty popover preview, subtitle line."
         )
     }
 
@@ -1041,7 +1053,7 @@ enum AppStrings {
         )
 
         static let createFirstTileDescription = NSLocalizedString(
-            "empty.createFirstTileDescriptionV2",
+            "empty.createFirstTileDescription",
             value: "Group apps and folders behind one Dock icon. Start blank, or from a tile suggested from the apps you use.",
             comment: "Zero-tiles description"
         )

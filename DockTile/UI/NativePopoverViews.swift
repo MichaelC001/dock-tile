@@ -438,13 +438,19 @@ struct StackPopoverView: View {
 
     private var emptyStateView: some View {
         VStack(spacing: 8) {
-            Image(systemName: "app.badge.plus")
+            // `plus.app`, NOT `app.badge.plus` — the latter is not a real SF Symbol, so it rendered
+            // as nothing at all. Silent: an unknown symbol name draws empty with no warning.
+            Image(systemName: "plus.app")
                 .font(.system(size: 32))
                 .foregroundStyle(.secondary)
             if editing != nil {
-                Text(AppStrings.PopoverOption.editingNoAppsYet)
-                    .font(.system(size: 12))
+                // Same two-line shape as the shipped state below — one title, one supporting line.
+                Text(AppStrings.PopoverOption.editingNoAppsTitle)
+                    .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(.secondary)
+                Text(AppStrings.PopoverOption.editingNoAppsSubtitle)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.tertiary)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 230)
             } else {
@@ -758,14 +764,21 @@ struct ListPopoverView: View {
     }
 
     private var emptyStateView: some View {
-        Text(editing != nil ? AppStrings.PopoverOption.editingNoAppsYet : AppStrings.Empty.noApps)
-            .font(.system(size: 12))
-            .foregroundStyle(.secondary)
-            .editingOnly(editing) {
-                $0.multilineTextAlignment(.center).padding(.horizontal, 12)
+        VStack(spacing: 4) {
+            Text(editing != nil ? AppStrings.PopoverOption.editingNoAppsTitle : AppStrings.Empty.noApps)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.secondary)
+            if editing != nil {
+                Text(AppStrings.PopoverOption.editingNoAppsSubtitle)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 12)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, PopoverPanelLayout.listEmptyStatePadding)
+        }
+        .frame(maxWidth: .infinity)
+        // Every vertical term here is mirrored in `PopoverPanelLayout.listPanelSize`.
+        .padding(.vertical, PopoverPanelLayout.listEmptyStatePadding)
     }
 
     // MARK: - Keyboard Navigation

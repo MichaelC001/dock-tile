@@ -138,7 +138,8 @@ struct DockTileDetailView: View {
         .background(Color(nsColor: .windowBackgroundColor))
         // Delete + the dynamic action button trail the title band via PaneTitleBand's own flexible
         // spacer (single `.toolbar {}` call — see PaneTitleBand in DockTileConfigurationView.swift).
-        .paneTitleBand(editedConfig.name) {
+        // The band shows the COMMITTED name — typing re-titles the preview below, not the chrome.
+        .paneTitleBand(configManager.displayName(for: editedConfig.id)) {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button {
                     DiagnosticsLog.shared.ui("Tile Detail → Delete tile pressed '\(editedConfig.name)' (shows delete confirmation)")
@@ -146,7 +147,10 @@ struct DockTileDetailView: View {
                 } label: {
                     Image(systemName: "trash")
                 }
-                .buttonStyle(.borderless)
+                // `.bordered`, not `.borderless`: the destructive action needs the same rounded
+                // surface as the action button beside it, or it reads as a bare glyph floating in
+                // the band.
+                .buttonStyle(.bordered)
                 .help(AppStrings.Tooltip.deleteTile)
                 .accessibilityLabel(AppStrings.Title.deleteTile)
 
@@ -390,6 +394,10 @@ struct DockTileDetailView: View {
                     Toggle("", isOn: $editedConfig.isVisibleInDock)
                         .labelsHidden()
                         .toggleStyle(.switch)
+                        // `.mini` renders 36x16 — the size the Form-hosted switches in Dock Lock and
+                        // General already use. One switch size app-wide; `.small` is 44x20 and stood
+                        // out against every settings pane.
+                        .controlSize(.mini)
                 }
 
                 // Row 3: Show in App Switcher (last row, no separator)
@@ -400,6 +408,7 @@ struct DockTileDetailView: View {
                     Toggle("", isOn: $editedConfig.showInAppSwitcher)
                         .labelsHidden()
                         .toggleStyle(.switch)
+                        .controlSize(.mini)
                 }
             }
             .padding(.horizontal, 10)
@@ -594,6 +603,10 @@ struct DockTileDetailView: View {
                 // Update local state to match saved config
                 editedConfig = configToSave
                 tileName = configToSave.name
+
+                // THIS is the moment the sidebar row and title band adopt a rename — see
+                // ConfigurationManager.committedNames.
+                configManager.commitDisplayName(for: configToSave.id)
 
                 // The action applied/saved everything — mark content clean so the saveOnly
                 // "Done" button disables until the user edits again. Signature-based (not the

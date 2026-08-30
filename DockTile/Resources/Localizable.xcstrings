@@ -2473,30 +2473,6 @@
         }
       }
     },
-    "popover.editing.noAppsYet": {
-      "comment": "Tile editor empty state",
-      "extractionState": "manual",
-      "localizations": {
-        "en-AU": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No apps yet. Use Add to choose what opens from this tile."
-          }
-        },
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No apps yet. Use Add to choose what opens from this tile."
-          }
-        },
-        "en-US": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No apps yet. Use Add to choose what opens from this tile."
-          }
-        }
-      }
-    },
     "section.inThisTile": {
       "comment": "Tile Detail: apps section header",
       "extractionState": "manual",
@@ -2665,7 +2641,31 @@
         }
       }
     },
-    "empty.createFirstTileDescriptionV2": {
+    "label.addAppsTooltip": {
+      "comment": "Tooltip on the + Add button above the tile editor's popover preview.",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add apps or folders to this tile"
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add apps or folders to this tile"
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add apps or folders to this tile"
+          }
+        }
+      }
+    },
+    "empty.createFirstTileDescription": {
       "comment": "Zero-tiles description",
       "extractionState": "manual",
       "localizations": {
@@ -2689,26 +2689,146 @@
         }
       }
     },
-    "label.addAppsTooltip": {
-      "comment": "Tooltip on the + Add button above the tile editor's popover preview.",
+    "popover.editing.noAppsTitle": {
+      "comment": "Tile editor: empty popover preview, title line.",
       "extractionState": "manual",
       "localizations": {
         "en-AU": {
           "stringUnit": {
             "state": "translated",
-            "value": "Add apps or folders to this tile"
+            "value": "No apps yet"
           }
         },
         "en-GB": {
           "stringUnit": {
             "state": "translated",
-            "value": "Add apps or folders to this tile"
+            "value": "No apps yet"
           }
         },
         "en-US": {
           "stringUnit": {
             "state": "translated",
-            "value": "Add apps or folders to this tile"
+            "value": "No apps yet"
+          }
+        }
+      }
+    },
+    "popover.editing.noAppsSubtitle": {
+      "comment": "Tile editor: empty popover preview, subtitle line.",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use Add to choose what opens from this tile."
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use Add to choose what opens from this tile."
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use Add to choose what opens from this tile."
+          }
+        }
+      }
+    },
+    "about.diagnosticsBody": {
+      "comment": "About: Copy Diagnostics row description.",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A log of what the app and its tiles did. Attach it to an email when something looks wrong — it contains nothing personal."
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A log of what the app and its tiles did. Attach it to an email when something looks wrong — it contains nothing personal."
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A log of what the app and its tiles did. Attach it to an email when something looks wrong — it contains nothing personal."
+          }
+        }
+      }
+    },
+    "about.feedbackRowBody": {
+      "comment": "About: Send Feedback row description.",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feedback goes straight to the developer."
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feedback goes straight to the developer."
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feedback goes straight to the developer."
+          }
+        }
+      }
+    },
+    "about.diagnosticsTitle": {
+      "comment": "About: Copy Diagnostics row label.",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnostics"
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnostics"
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnostics"
+          }
+        }
+      }
+    },
+    "button.copy": {
+      "comment": "Generic Copy button label.",
+      "extractionState": "manual",
+      "localizations": {
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy"
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy"
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy"
           }
         }
       }

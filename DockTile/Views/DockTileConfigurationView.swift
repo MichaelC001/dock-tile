@@ -371,11 +371,20 @@ private func paneTitleItem(title: String) -> some ToolbarContent {
 private struct PaneTitleLabel: View {
     let title: String
 
+    /// Nudge that lands the title on the pane's CONTENT leading edge rather than the toolbar's own,
+    /// narrower inset — the title band IS the page header, so a title starting left of the first row
+    /// below it reads as misaligned on every pane. Every pane insets its content by 20pt from the
+    /// detail column; the toolbar item supplies part of that, and this covers the remainder.
+    /// Measured, not guessed: with this value the title's AX frame and the first card's AX frame
+    /// share a leading edge on both the Tile Detail (ScrollView) and Settings (Form) panes.
+    static let leadingAdjustment: CGFloat = 12
+
     var body: some View {
         Text(title)
             .font(.system(size: 16, weight: .semibold))
             .foregroundStyle(.primary)
             .lineLimit(1)
+            .padding(.leading, Self.leadingAdjustment)
             .accessibilityAddTraits(.isHeader)
     }
 }

@@ -11,9 +11,15 @@ import SwiftUI
 /// Links the pane opens. `feedback` comes from Info.plist `DTFeedbackEmail` (mailto:) when set,
 /// otherwise the website — never a hard-coded address.
 enum AboutLinks {
-    static let website = URL(string: "https://docktile.rkarthik.co")!
-    static let studio  = URL(string: "https://happymachines.company/")!
-    static let spades  = URL(string: "https://spadesaudio.com/")!
+    /// Every human-facing link the app opens is tagged, so the sites can tell app traffic from
+    /// search or social. Machine-read URLs (the Sparkle appcast) are never tagged.
+    private static let campaign = "utm_source=docktile-mac"
+
+    static let website = URL(string: "https://docktile.app/?\(campaign)")!
+    static let studio  = URL(string: "https://happymachines.company/?\(campaign)")!
+    static let spades  = URL(string: "https://spadesaudio.com/?\(campaign)")!
+    /// What the Website row shows — the bare host, without the tracking query.
+    static let websiteDisplay = "docktile.app"
     static var feedback: URL {
         guard let email = Bundle.main.object(forInfoDictionaryKey: "DTFeedbackEmail") as? String,
               !email.isEmpty else { return website }
@@ -57,25 +63,34 @@ struct AboutPaneView: View {
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                         LabeledContent(AppStrings.About.website) {
-                            Link("docktile.rkarthik.co", destination: AboutLinks.website)
+                            Link(AboutLinks.websiteDisplay, destination: AboutLinks.website)
                         }
                     }
+                    // Support actions as ordinary settings rows — label and description leading, a
+                    // single button trailing — so they read like the Check for Updates row above
+                    // rather than a card with two stretched buttons under it.
                     Section {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(AppStrings.About.feedbackTitle)
-                            Text(AppStrings.About.feedbackBody).font(.caption).foregroundStyle(.secondary)
-                        }
-                        HStack(spacing: 8) {
-                            Button {
+                        LabeledContent {
+                            Button(AppStrings.About.sendFeedback) {
                                 DiagnosticsLog.shared.ui("About → Send Feedback")
                                 NSWorkspace.shared.open(AboutLinks.feedback)
-                            } label: { Label(AppStrings.About.sendFeedback, systemImage: "envelope") }
-                            .frame(maxWidth: .infinity)
-                            Button {
+                            }
+                        } label: {
+                            Text(AppStrings.About.feedbackTitle)
+                            Text(AppStrings.About.feedbackRowBody)
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        LabeledContent {
+                            // "Copy", not "Copy Diagnostics" — the row label already says which.
+                            Button(AppStrings.Button.copy) {
                                 DiagnosticsLog.shared.ui("About → Copy Diagnostics")
                                 DiagnosticsLog.shared.copyToPasteboard()
-                            } label: { Label(AppStrings.Menu.copyDiagnostics, systemImage: "doc.text") }
-                            .frame(maxWidth: .infinity)
+                            }
+                            .accessibilityLabel(AppStrings.Menu.copyDiagnostics)
+                        } label: {
+                            Text(AppStrings.About.diagnosticsTitle)
+                            Text(AppStrings.About.diagnosticsBody)
+                                .font(.caption).foregroundStyle(.secondary)
                         }
                     }
                     Section {

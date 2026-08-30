@@ -17,7 +17,7 @@ It is distributed as a direct download (not the App Store) so it can integrate d
 - "Made for your Dock — native, fast, and out of your way."
 - Three pillars: **One click to everything** (group apps behind one tile) · **Custom tile icons** (colors, symbols, emoji, 4 Tahoe styles) · **Dock Lock** (pin the Dock to one display on multi-monitor setups).
 
-**Brand:** Product name is "Dock Tile" (with a space). Logo is a rising-sun glyph (a sun inside a rounded ring). Distributed at docktile.rkarthik.co.
+**Brand:** Product name is "Dock Tile" (with a space). Logo is a rising-sun glyph (a sun inside a rounded ring). Distributed at docktile.app.
 
 ---
 
@@ -242,7 +242,7 @@ Centered, 400pt wide, 28pt padding. Auto-dismisses when permission is granted.
   icon previews on a small Dock-like strip, plus a system folder icon, on a vibrancy card.
 - **Version row**: app name + "Version X.Y.Z" caption, trailing **"Check for Updates…"** button
   (disabled mid-check) — Software Update's only home now.
-- **Website row**: "Website" label, link "docktile.rkarthik.co".
+- **Website row**: "Website" label, link "docktile.app".
 - **Feedback card**: "Found a bug or have an idea?" + "Feedback goes straight to the developer.
   Diagnostics attach a log of what the app and its tiles did — nothing personal." + two buttons,
   **"Send Feedback…"** (mailto:, falls back to the website if no feedback address is configured)

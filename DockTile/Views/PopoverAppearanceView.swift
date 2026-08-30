@@ -300,7 +300,7 @@ struct PopoverAppearanceView: View {
                 Toggle("", isOn: showLabels)
                     .labelsHidden()
                     .toggleStyle(.switch)
-                    .controlSize(.small)
+                    .controlSize(.mini)
             }
         }
         .padding(.horizontal, 14)
@@ -342,7 +342,7 @@ struct PopoverAppearanceView: View {
             Toggle("", isOn: isOn)
                 .labelsHidden()
                 .toggleStyle(.switch)
-                .controlSize(.small)
+                .controlSize(.mini)
         }
         .padding(.horizontal, 14)
         .frame(minHeight: 40)

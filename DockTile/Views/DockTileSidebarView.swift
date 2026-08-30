@@ -24,12 +24,25 @@ struct DockTileSidebarView: View {
         List(selection: $selection) {
             Section(AppStrings.Sidebar.tilesSection) {
                 if configManager.configurations.isEmpty {
-                    // Tappable so the user can return to the empty-state detail after visiting a
-                    // Settings pane (with zero tiles there's no tile row to select otherwise).
-                    Text(AppStrings.Empty.noTiles)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .tag(SidebarSelection.tilesPlaceholder)
+                    // At zero tiles this row IS the only way to add one — the toolbar + stays hidden
+                    // until a tile exists (see `addButton`). It also replaces the old inert
+                    // "No Tiles" placeholder as the escape route out of a Settings pane: with no
+                    // tile rows to click back to, the user would otherwise be stranded there.
+                    Button(action: onAdd) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 13, weight: .medium))
+                                .frame(width: 24, height: 24)
+                                .foregroundStyle(.secondary)
+                            Text(AppStrings.Button.addATile)
+                                .font(.system(size: 13))
+                            Spacer()
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.vertical, 4)
+                    .tag(SidebarSelection.tilesPlaceholder)
                 } else {
                     ForEach(configManager.configurations) { config in
                         ConfigurationRow(config: config)
@@ -77,16 +90,20 @@ struct DockTileSidebarView: View {
         // level it still rendered. It must stay on the sidebar column's own content.
         .toolbar(removing: .sidebarToggle)
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button(action: onAdd) {
-                    Image(systemName: "plus")
+            // Hidden until the first tile exists: at zero tiles the "Add a Tile…" row above is the
+            // single add affordance, so first run offers exactly one way in rather than three.
+            if !configManager.configurations.isEmpty {
+                ToolbarItem(placement: .primaryAction) {
+                    Button(action: onAdd) {
+                        Image(systemName: "plus")
+                    }
+                    .accessibilityIdentifier("addTileButton")
+                    .accessibilityLabel(AppStrings.Button.addATile)
+                    .disabled(!configManager.canCreateNewTile)
+                    .help(configManager.canCreateNewTile
+                        ? AppStrings.Tooltip.createNewTile
+                        : AppStrings.Tooltip.editFirst)
                 }
-                .accessibilityIdentifier("addTileButton")
-                .accessibilityLabel(AppStrings.Button.addATile)
-                .disabled(!configManager.canCreateNewTile)
-                .help(configManager.canCreateNewTile
-                    ? AppStrings.Tooltip.createNewTile
-                    : AppStrings.Tooltip.editFirst)
             }
         }
     }
@@ -186,6 +203,7 @@ struct SettingsBadgeIcon: View {
 // MARK: - Configuration Row
 
 struct ConfigurationRow: View {
+    @EnvironmentObject private var configManager: ConfigurationManager
     let config: DockTileConfiguration
 
     var body: some View {
@@ -193,7 +211,9 @@ struct ConfigurationRow: View {
             // Mini icon preview (24×24pt) - uses same component as other previews
             DockTileIconPreview.fromConfig(config, size: 24)
 
-            Text(config.name)
+            // The COMMITTED name, not the stored one: a rename in the editor re-titles the live
+            // preview immediately but only reaches this row on Add to Dock / Update / Done.
+            Text(configManager.displayName(for: config.id))
                 .font(.system(size: 13))
                 .lineLimit(1)
         }

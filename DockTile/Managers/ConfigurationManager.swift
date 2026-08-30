@@ -37,6 +37,13 @@ final class ConfigurationManager: ObservableObject {
     /// user dismisses the banner or adds the tile to the Dock.
     @Published private(set) var smartAddProvenanceIDs: Set<UUID> = []
 
+    /// The name each tile is LISTED under — sidebar rows and the title band. Deliberately lags the
+    /// stored `name`: renaming re-titles the live preview immediately (that is what you are editing)
+    /// but the sidebar and header only catch up on an explicit Add to Dock / Update / Done, so the
+    /// window chrome doesn't rewrite itself under the cursor on every keystroke. Runtime-only — the
+    /// stored name is still saved as you type, so nothing is lost and a relaunch shows the real name.
+    @Published private(set) var committedNames: [UUID: String] = [:]
+
     /// Throttle guard — the full sweep runs once per app session (window-appear), not on every
     /// activation. `scanForMissingApps(force:)` bypasses it for explicit re-checks (e.g. after a
     /// remove). Mirrors the `lastMigratedAppVersion` once-per-launch guard.
@@ -252,6 +259,7 @@ final class ConfigurationManager: ObservableObject {
         }
 
         let config = configurations[index]
+        committedNames.removeValue(forKey: id)
 
         // Always clean up helper bundle. uninstallHelper itself only restarts the Dock when
         // it actually removed a plist entry — the config's isVisibleInDock flag is NOT a
@@ -472,6 +480,22 @@ final class ConfigurationManager: ObservableObject {
             DiagnosticsLog.shared.log("config", "FAILED to load/decode configurations (starting empty): \(error.localizedDescription)")
             configurations = []
         }
+    }
+
+    // MARK: - Committed display names
+
+    /// The name to LIST a tile under. Falls back to the stored name for any tile that has not been
+    /// through an editor commit yet (freshly loaded, or created outside the editor).
+    func displayName(for id: UUID) -> String {
+        if let committed = committedNames[id] { return committed }
+        return configurations.first(where: { $0.id == id })?.name ?? ""
+    }
+
+    /// Publish the tile's current stored name to the sidebar and title band. Called after a
+    /// successful Add to Dock / Update / Done — never from the editor's debounced auto-save.
+    func commitDisplayName(for id: UUID) {
+        guard let name = configurations.first(where: { $0.id == id })?.name else { return }
+        committedNames[id] = name
     }
 
     // MARK: - Helper Methods

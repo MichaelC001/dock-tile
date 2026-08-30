@@ -42,12 +42,21 @@ struct PopoverPreviewCanvasTests {
         #expect(size == CGSize(width: 240, height: 264))
     }
 
+    @Test("Empty grid gets a readable width, not a one-column sliver")
+    func naturalGridPanelSizeEmpty() {
+        let size = PopoverPreviewCanvas.naturalPanelSize(
+            layout: .grid, appCount: 0, settings: .default, includesUtilityRows: false)
+        // Columns are capped at the app count, so the raw width would be one 82pt cell + 32pt
+        // padding = 114 — narrow enough to shred the empty state's two lines. Floored at 260.
+        #expect(size == CGSize(width: 260, height: 180))
+    }
+
     @Test("Empty list in the editor: sized for the edit-mode empty state, not a phantom row")
     func naturalListPanelSizeEmpty() {
         let size = PopoverPreviewCanvas.naturalPanelSize(
             layout: .list, appCount: 0, settings: .default, includesUtilityRows: false)
-        // 32 header + 32 empty-state vertical padding + 30 two-line text + 16 outer padding = 110
-        #expect(size == CGSize(width: 240, height: 110))
+        // 32 header + 32 empty-state vertical padding + 48 title/subtitle + 16 outer padding = 128
+        #expect(size == CGSize(width: 240, height: 128))
     }
 
     @Test("A cleared tile name drops the title row from the estimate, not just from the panel")
@@ -70,8 +79,8 @@ struct PopoverPreviewCanvasTests {
         let size = PopoverPreviewCanvas.naturalPanelSize(
             layout: .list, appCount: 0, settings: .default, includesUtilityRows: false,
             hasHeader: false)
-        // 110 - the 32pt header row.
-        #expect(size == CGSize(width: 240, height: 78))
+        // 128 - the 32pt header row.
+        #expect(size == CGSize(width: 240, height: 96))
     }
 
     @Test("A panel wider than the detail column scales DOWN to fit flush")
