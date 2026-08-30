@@ -221,16 +221,16 @@ struct DockTileDetailView: View {
             // The actual Dock add/remove is logged in performDockAction; this records the
             // user's toggle intent (verbose — the outcome is what matters in prod reports).
             if hasAppearedOnce {
-                DiagnosticsLog.shared.log("tile", "Show Tile toggled \(newValue ? "ON" : "OFF") for '\(editedConfig.name)' (applies on action)", verbose: true)
+                DiagnosticsLog.shared.log("tile", "Show Tile toggled \(newValue ? "ON" : "OFF") for \(editedConfig.diagnosticName) (applies on action)", verbose: true)
             }
         }
         .onChange(of: editedConfig.layoutMode) { _, newValue in
             guard hasAppearedOnce else { return }
-            DiagnosticsLog.shared.log("tile", "Layout changed to \(newValue.rawValue) for '\(editedConfig.name)'")
+            DiagnosticsLog.shared.log("tile", "Layout changed to \(newValue.rawValue) for \(editedConfig.diagnosticName)")
         }
         .onChange(of: editedConfig.showInAppSwitcher) { _, newValue in
             guard hasAppearedOnce else { return }
-            DiagnosticsLog.shared.log("tile", "Mode changed to \(newValue ? "App" : "Ghost") for '\(editedConfig.name)'")
+            DiagnosticsLog.shared.log("tile", "Mode changed to \(newValue ? "App" : "Ghost") for \(editedConfig.diagnosticName)")
         }
         .onChange(of: configManager.configurations) { _, newConfigs in
             // Sync editedConfig when underlying configuration changes (e.g., from CustomiseTileView)
@@ -482,7 +482,7 @@ struct DockTileDetailView: View {
                 editing: PopoverEditing(
                     onRemove: { app in
                         editedConfig.appItems = AppListEditor.removing(app.id, from: editedConfig.appItems)
-                        DiagnosticsLog.shared.log("tile", "Removed 1 item(s) from '\(editedConfig.name)': \(app.name)")
+                        DiagnosticsLog.shared.log("tile", "Removed 1 item(s) from \(editedConfig.diagnosticName): \(app.name)")
                     },
                     onMove: { dragged, target in
                         editedConfig.appItems = AppListEditor.moving(dragged.id, onto: target.id, in: editedConfig.appItems)
@@ -570,7 +570,7 @@ struct DockTileDetailView: View {
                     ])
                     print("✅ Helper installed: \(configToSave.name)")
                     print("   User can open it from: ~/Library/Application Support/DockTile/")
-                    DiagnosticsLog.shared.log("dock", "\(wasInDock ? "Updated" : "Added") tile '\(configToSave.name)' in Dock")
+                    DiagnosticsLog.shared.log("dock", "\(wasInDock ? "Updated" : "Added") tile \(configToSave.diagnosticName) in Dock")
 
                 case .remove:
                     // User wants tile removed - save position before removal
@@ -584,12 +584,12 @@ struct DockTileDetailView: View {
                     }
                     AnalyticsService.shared.log(.tileHidden, ["app_count": configToSave.appItems.count])
                     print("✅ Tile removed from Dock: \(configToSave.name)")
-                    DiagnosticsLog.shared.log("dock", "Removed tile '\(configToSave.name)' from Dock (savedIndex=\(savedPosition.map(String.init) ?? "nil"))")
+                    DiagnosticsLog.shared.log("dock", "Removed tile \(configToSave.diagnosticName) from Dock (savedIndex=\(savedPosition.map(String.init) ?? "nil"))")
 
                 case .saveOnly:
                     // Hidden tile with nothing pinned: persist edits only. No Dock op, no restart.
                     print("💾 Saving hidden tile without touching the Dock: \(configToSave.name)")
-                    DiagnosticsLog.shared.log("dock", "Saved hidden tile '\(configToSave.name)' — no Dock op, Dock NOT restarted")
+                    DiagnosticsLog.shared.log("dock", "Saved hidden tile \(configToSave.diagnosticName) — no Dock op, Dock NOT restarted")
                 }
 
                 // Save configuration changes (including lastDockIndex)
@@ -624,11 +624,11 @@ struct DockTileDetailView: View {
                 // The app is translocated (running from a quarantined ~/Downloads copy) so it can't
                 // build the helper. Don't just show the raw error — offer the actionable fix.
                 errorMessage = error.localizedDescription
-                DiagnosticsLog.shared.log("dock", "Dock action blocked for '\(editedConfig.name)': app is translocated")
+                DiagnosticsLog.shared.log("dock", "Dock action blocked for \(editedConfig.diagnosticName): app is translocated")
                 AppRelocationManager.shared.presentBlockingPrompt()
             } catch {
                 errorMessage = error.localizedDescription
-                DiagnosticsLog.shared.log("dock", "Dock action FAILED for '\(editedConfig.name)' (visible=\(editedConfig.isVisibleInDock)): \(error.localizedDescription)")
+                DiagnosticsLog.shared.log("dock", "Dock action FAILED for \(editedConfig.diagnosticName) (visible=\(editedConfig.isVisibleInDock)): \(error.localizedDescription)")
                 AnalyticsService.shared.record(error, context: "performDockAction",
                                                keys: ["bundle_id": editedConfig.bundleIdentifier,
                                                       "visible": String(editedConfig.isVisibleInDock)])
@@ -750,7 +750,7 @@ struct DockTileDetailView: View {
         }
 
         let names = newItems.map(\.name).joined(separator: ", ")
-        DiagnosticsLog.shared.log("tile", "Added \(newItems.count) item(s) to '\(editedConfig.name)', skipped \(skipped) duplicate(s) (\(editedConfig.appItems.count) total)\(names.isEmpty ? "" : ": \(names)")")
+        DiagnosticsLog.shared.log("tile", "Added \(newItems.count) item(s) to \(editedConfig.diagnosticName), skipped \(skipped) duplicate(s) (\(editedConfig.appItems.count) total)\(names.isEmpty ? "" : ": \(names)")")
     }
 }
 

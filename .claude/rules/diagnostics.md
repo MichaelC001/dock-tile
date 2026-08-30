@@ -12,7 +12,14 @@ main app **and every helper tile**. Rich in dev, lean in prod. Engine:
   [category] message`. Main app trims to the last hour on launch (`prepareOnLaunch`); helpers
   append-only (no trim races). `report()` reads the shared file so the copied report spans all
   processes. Mirrored to the unified log (subsystem `com.docktile.diagnostics`) for Console.app.
-- Helpers tag themselves via `setLabel("helper:<tile>")` once their config loads.
+- Helpers tag themselves via `setLabel("helper:<tile> (<shortId>)")` once their config loads.
+- **Tiles are identified by `config.diagnosticName`, never bare `config.name` (critical)**: two tiles
+  can legitimately share a name (`Utils` twice), so a line like `Added tile 'Utils' in Dock` could
+  not say which one. `diagnosticName` renders `'Utils' (B4EF96A2)` — `shortId` is the first 8 chars
+  of the tile UUID, the same prefix the bundle identifier carries and the suffix a same-named helper
+  folder gets (`Utils-B4EF96A2.app`), so one token ties a report line to the Dock entry, the folder
+  on disk and the `[helper:Utils (B4EF96A2) pid]` process tag. Every `DiagnosticsLog` line that
+  names a tile (dock / sync / tile / migration categories) goes through it.
 
 ## Verbosity: dev-rich / prod-quiet (critical)
 

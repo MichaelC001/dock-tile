@@ -156,6 +156,33 @@ struct HelperFolderNameTests {
     }
 }
 
+// MARK: - Dock entry label (the tooltip must be the tile name, never the folder stem)
+
+@Suite("Dock file-label")
+struct DockFileLabelTests {
+
+    @Test("Display name wins over a disambiguated folder stem")
+    func displayNameBeatsFolderStem() {
+        // The shipped bug: the second same-named tile lives in Utils-B4EF96A2.app and the Dock
+        // tooltip showed the stem. The Dock renders file-label verbatim, so it must be the name.
+        let plist: [String: Any] = ["CFBundleDisplayName": "Utils", "CFBundleName": "Utils"]
+        #expect(HelperBundleManager.dockFileLabel(infoPlist: plist, folderStem: "Utils-B4EF96A2") == "Utils")
+    }
+
+    @Test("Falls back to CFBundleName, then to the folder stem")
+    func fallbackOrder() {
+        #expect(HelperBundleManager.dockFileLabel(
+            infoPlist: ["CFBundleName": "AI Tile"], folderStem: "AI Tile-EA03FD62") == "AI Tile")
+        #expect(HelperBundleManager.dockFileLabel(infoPlist: [:], folderStem: "Media") == "Media")
+    }
+
+    @Test("Blank names are treated as absent")
+    func blankNamesSkipped() {
+        let plist: [String: Any] = ["CFBundleDisplayName": "", "CFBundleName": "Dev"]
+        #expect(HelperBundleManager.dockFileLabel(infoPlist: plist, folderStem: "Dev-42EF7FC1") == "Dev")
+    }
+}
+
 // MARK: - Test-host guard
 
 @Suite("Test environment detection")

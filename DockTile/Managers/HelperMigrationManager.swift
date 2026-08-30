@@ -221,7 +221,7 @@ final class HelperMigrationManager {
                     try await helperManager.regenerateHelperBundle(for: config)
                     print("[Migration]   Regenerated '\(config.name)'")
                 } catch {
-                    DiagnosticsLog.shared.log("migration", "FAILED to regenerate '\(config.name)': \(error.localizedDescription)")
+                    DiagnosticsLog.shared.log("migration", "FAILED to regenerate \(config.diagnosticName): \(error.localizedDescription)")
                     AnalyticsService.shared.record(error, context: "regenerateHelperBundle",
                                                    keys: ["bundle_id": config.bundleIdentifier])
                     throw error

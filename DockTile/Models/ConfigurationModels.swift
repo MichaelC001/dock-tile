@@ -30,6 +30,17 @@ struct DockTileConfiguration: Identifiable, Codable, Hashable {
     var lastDockIndex: Int?  // v5: Saved Dock position for show/hide restoration
     var helperAppVersion: String?  // v6: App version when helper was last built/updated
 
+    // MARK: - Diagnostic identity
+
+    /// First 8 characters of the tile's UUID — the same prefix the bundle identifier carries and
+    /// the suffix a same-named helper folder gets (`<name>-<shortId>.app`).
+    var shortId: String { String(id.uuidString.prefix(8)) }
+
+    /// How a tile is named in diagnostics: `'Utils' (B4EF96A2)`. Two tiles may share a name, so
+    /// the name alone can't identify one in a report; the short id ties the line to the Dock
+    /// entry, the helper folder and the `[helper:…]` process tag.
+    var diagnosticName: String { "'\(name)' (\(shortId))" }
+
     // MARK: - Initialization
 
     init(

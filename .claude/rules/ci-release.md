@@ -42,6 +42,16 @@ Entitlements in `DockTile/DockTile.entitlements`:
   (KVO via Combine) so the Settings → General **Check for Updates…** button disables mid-session
 - Daily checks (`SUScheduledCheckInterval = 86400`)
 
+## New development machine
+
+Everything the release needs lives in GitHub secrets, so a new Mac only needs `gh auth` + git
+identity to tag a release. The **one machine-local secret is the Sparkle EdDSA private key**:
+`generate_keys` stores it as a non-synchronizable login-keychain item (iCloud Keychain never carries
+it), and the GitHub secret cannot be read back. Move it with `generate_keys -x file` (old Mac) →
+`generate_keys -i file` (new Mac); `generate_keys -p` must print the `SUPublicEDKey` in
+`Resources/Info.plist`. Never regenerate it — a new key orphans every installed copy. Local
+`sign_update --verify` also needs this key; OpenSSL can verify an appcast signature without it.
+
 ## GitHub Secrets
 
 `DEVELOPER_ID_APPLICATION_CERTIFICATE`, `DEVELOPER_ID_APPLICATION_PASSWORD`, `KEYCHAIN_PASSWORD`, `APPLE_TEAM_ID`, `APPLE_DEVELOPER_NAME`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `SPARKLE_EDDSA_KEY`

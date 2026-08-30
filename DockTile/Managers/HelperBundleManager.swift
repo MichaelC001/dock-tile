@@ -360,7 +360,7 @@ final class HelperBundleManager {
         let folder = Self.helperFolderName(
             baseName: base,
             cleanNameTakenByOther: takenByOther,
-            shortId: String(config.id.uuidString.prefix(8))
+            shortId: config.shortId
         )
         return helperDirectory.appendingPathComponent(folder)
     }
@@ -370,6 +370,21 @@ final class HelperBundleManager {
     /// from colliding. Extracted so the regression is unit-testable without FileManager.
     nonisolated static func helperFolderName(baseName: String, cleanNameTakenByOther: Bool, shortId: String) -> String {
         cleanNameTakenByOther ? "\(baseName)-\(shortId).app" : "\(baseName).app"
+    }
+
+    /// Pure rule for the Dock entry's `file-label` — the tooltip the Dock shows for a pinned tile.
+    /// The Dock renders this string verbatim and never re-derives it from Launch Services (verified:
+    /// rewriting the field + `killall Dock` sticks), so it must be the tile's display name, NOT the
+    /// folder stem — a same-named tile lives in `<name>-<shortId>.app`, and the stem leaked the id
+    /// into the tooltip ("Utils-B4EF96A2"). `CFBundleDisplayName` → `CFBundleName` → stem mirrors
+    /// what the Finder shows for a bundle whose folder matches its display name and what
+    /// `NSRunningApplication.localizedName` reports for the running helper (Cmd-Tab / Force Quit).
+    /// See docs/dock-tile-display-names.md. Blank values count as absent.
+    nonisolated static func dockFileLabel(infoPlist: [String: Any], folderStem: String) -> String {
+        for key in ["CFBundleDisplayName", "CFBundleName"] {
+            if let value = infoPlist[key] as? String, !value.isEmpty { return value }
+        }
+        return folderStem
     }
 
     /// The CFBundleIdentifier recorded in a helper bundle on disk (nil if absent/unreadable).
@@ -435,14 +450,14 @@ final class HelperBundleManager {
         // Prevent double-removal if this bundle is already being removed
         guard !removingBundleIds.contains(config.bundleIdentifier) else {
             print("⚠️ Skipping remove - already in progress for: \(config.name)")
-            DiagnosticsLog.shared.log("dock", "removeFromDock SKIPPED (remove already in progress) — '\(config.name)'")
+            DiagnosticsLog.shared.log("dock", "removeFromDock SKIPPED (remove already in progress) — \(config.diagnosticName)")
             return nil
         }
 
         // Also prevent removal while installation is in progress
         guard !installingBundleIds.contains(config.bundleIdentifier) else {
             print("⚠️ Skipping remove - installation in progress for: \(config.name)")
-            DiagnosticsLog.shared.log("dock", "removeFromDock SKIPPED (install in progress) — '\(config.name)'")
+            DiagnosticsLog.shared.log("dock", "removeFromDock SKIPPED (install in progress) — \(config.diagnosticName)")
             return nil
         }
 
@@ -460,7 +475,7 @@ final class HelperBundleManager {
         let helperRunning = isHelperRunning(bundleId: config.bundleIdentifier)
         guard Self.shouldPerformDockRemoval(isInDock: wasInDock, isHelperRunning: helperRunning) else {
             print("   ✓ Not in Dock and no helper running — nothing to remove, Dock left alone")
-            DiagnosticsLog.shared.log("dock", "removeFromDock NO-OP for '\(config.name)' (not pinned, helper not running) — Dock NOT restarted")
+            DiagnosticsLog.shared.log("dock", "removeFromDock NO-OP for \(config.diagnosticName) (not pinned, helper not running) — Dock NOT restarted")
             return nil
         }
 
@@ -502,7 +517,7 @@ final class HelperBundleManager {
 
             if findInDock(bundleId: config.bundleIdentifier) == nil {
                 print("   ✓ Verified tile removed from Dock")
-                DiagnosticsLog.shared.log("dock", "Removed '\(config.name)' from Dock (verified)")
+                DiagnosticsLog.shared.log("dock", "Removed \(config.diagnosticName) from Dock (verified)")
             } else {
                 // The entry came back: a Dock still holding the OLD persistent-apps in memory
                 // flushed it over our write when `killall` signalled it (measured — repeated
@@ -510,7 +525,7 @@ final class HelperBundleManager {
                 // restart' line from the July 2026 report). Re-remove with the Dock actually
                 // gone, so there is no process left to flush stale prefs on top of us.
                 print("   ⚠️ Tile reappeared after restart (Dock flushed stale prefs) — retrying")
-                DiagnosticsLog.shared.log("dock", "'\(config.name)' reappeared in Dock after restart — retrying removal with the Dock quit")
+                DiagnosticsLog.shared.log("dock", "\(config.diagnosticName) reappeared in Dock after restart — retrying removal with the Dock quit")
 
                 quitDockAndWaitForExit()
                 removeFromDockPlist(bundleId: config.bundleIdentifier)
@@ -518,15 +533,15 @@ final class HelperBundleManager {
 
                 if findInDock(bundleId: config.bundleIdentifier) == nil {
                     print("   ✓ Verified tile removed from Dock (on retry)")
-                    DiagnosticsLog.shared.log("dock", "Removed '\(config.name)' from Dock (verified on retry)")
+                    DiagnosticsLog.shared.log("dock", "Removed \(config.diagnosticName) from Dock (verified on retry)")
                 } else {
                     print("   ⚠️ Tile still in Dock after retry")
-                    DiagnosticsLog.shared.log("dock", "'\(config.name)' STILL in Dock after retry — removal did not take")
+                    DiagnosticsLog.shared.log("dock", "\(config.diagnosticName) STILL in Dock after retry — removal did not take")
                 }
             }
         } else {
             print("   ✓ No Dock plist entry to remove — Dock not restarted")
-            DiagnosticsLog.shared.log("dock", "removeFromDock for '\(config.name)': no plist entry — Dock NOT restarted")
+            DiagnosticsLog.shared.log("dock", "removeFromDock for \(config.diagnosticName): no plist entry — Dock NOT restarted")
         }
 
         print("✅ Removed from Dock: \(config.name)")
@@ -1110,9 +1125,10 @@ final class HelperBundleManager {
             print("   Target index: \(index) (preserving position)")
         }
 
-        // Get bundle identifier from the app first
+        // Read the helper's Info.plist once: bundle ID for identity, display name for the label.
         let infoPlistPath = appPath.appendingPathComponent("Contents/Info.plist")
-        guard let bundleId = NSDictionary(contentsOf: infoPlistPath)?["CFBundleIdentifier"] as? String else {
+        let infoPlist = NSDictionary(contentsOf: infoPlistPath) as? [String: Any] ?? [:]
+        guard let bundleId = infoPlist["CFBundleIdentifier"] as? String else {
             print("   ⚠️ Could not read bundle ID from app")
             return
         }
@@ -1150,7 +1166,11 @@ final class HelperBundleManager {
                     "_CFURLString": "file://\(appPathString)/",
                     "_CFURLStringType": 15
                 ],
-                "file-label": appPath.deletingPathExtension().lastPathComponent,
+                // Shown verbatim as the tile's tooltip — the display name, never the folder stem.
+                "file-label": Self.dockFileLabel(
+                    infoPlist: infoPlist,
+                    folderStem: appPath.deletingPathExtension().lastPathComponent
+                ),
                 "file-type": 41
             ],
             "tile-type": "file-tile"

@@ -26,6 +26,7 @@ Controlled via Info.plist variables (`DTEnvironment`, `DTHelperPrefix`, `DTPrefs
 
 ## Rules
 
+- [Coding Guardrails](/.claude/rules/coding-guardrails.md) — think first, simplest change, surgical diff, verified before done
 - [Architecture](/.claude/rules/architecture.md) — Helper bundles, Ghost/App mode, NSPopover, CFPreferences, Dock action rules
 - [Popover Appearance](/.claude/rules/popover-appearance.md) — Per-layout Grid/List popover settings, shared suite, apply-to-running-helpers
 - [Smart Add](/.claude/rules/smart-add.md) — On-device tile suggestions on +, pure ranking seams, opt-out toggle

@@ -24,6 +24,19 @@ plus permanent "visible but never pinned" churn (its bundle ID no longer had a b
 `findExistingHelper(bundleId:)` still locates the bundle by ID for update/regenerate, so renames and
 prior disambiguation are handled; `CFBundleName` keeps the clean human name regardless of folder.
 
+**The Dock label is the display name, never the folder stem (critical)**: the Dock renders a
+`persistent-apps` entry's `file-label` **verbatim** as the tile's tooltip and never re-derives it
+from Launch Services (verified: rewriting the field + `killall Dock` sticks), so `addToDock` writes
+it through the pure `HelperBundleManager.dockFileLabel` seam (`CFBundleDisplayName` →
+`CFBundleName` → stem; guarded by `DockFileLabelTests`). It used to write the folder stem, so the
+second same-named tile's tooltip read `Utils-B4EF96A2`. Finder/Spotlight still show the folder name
+(Apple's documented rule: a bundle's `CFBundleDisplayName` is honoured only when it matches the
+file-system name — see [docs/dock-tile-display-names.md](../../docs/dock-tile-display-names.md)),
+which is acceptable; Cmd-Tab / Force Quit already use the bundle's display name. The Dock plist
+schema itself is undocumented (dockutil also writes the path stem) — there is no public API for a
+pinned tile's label. Existing wrong labels self-heal on the next version-bump migration, because
+`refreshDockEntry` re-seats every pinned entry through `addToDock`.
+
 **Runtime** (`HelperAppDelegate`): Sets activation policy based on Ghost/App mode, shows NSPopover on click.
 
 **Deletion** (`HelperBundleManager.uninstallHelper`): Quits helper → removes from Dock plist → deletes bundle → restarts Dock. Uses `async Task.sleep` (not sync `Thread.sleep`).

@@ -18,7 +18,8 @@ NC='\033[0m' # No Color
 # Project settings
 PROJECT="DockTile.xcodeproj"
 SCHEME="DockTile"
-APP_NAME="DockTile"
+APP_NAME="Dock Tile"          # product name (has a space — see development.md)
+APP_NAME_NO_SPACE="DockTile"  # DMG filename, matches create-dmg.sh
 BUILD_DIR="./build"
 
 # Options
@@ -70,6 +71,9 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Pretty-print via xcpretty when available; plain passthrough otherwise (pipefail keeps xcodebuild's status).
+if command -v xcpretty >/dev/null 2>&1; then PRETTY=(xcpretty --color); else PRETTY=(cat); fi
+
 # Get script directory for relative paths
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
@@ -95,7 +99,7 @@ xcodebuild \
     -configuration Release \
     -derivedDataPath "$BUILD_DIR" \
     build \
-    2>&1 | xcpretty --color || {
+    2>&1 | "${PRETTY[@]}" || {
         echo -e "${RED}Build failed!${NC}"
         exit 1
     }
@@ -163,7 +167,7 @@ echo -e "${BLUE}[4/5] Creating DMG installer...${NC}"
     --output-dir "$BUILD_DIR" \
     --version "$VERSION"
 
-DMG_PATH="$BUILD_DIR/$APP_NAME-$VERSION.dmg"
+DMG_PATH="$BUILD_DIR/$APP_NAME_NO_SPACE-$VERSION.dmg"
 
 # Step 5: Notarize (if requested)
 if [[ "$NOTARIZE" == true ]]; then
