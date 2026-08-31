@@ -86,20 +86,19 @@ if [[ $DARK -eq 1 && "$WAS_DARK" == "false" ]]; then
   trap 'restore_dark false' EXIT INT TERM
   restore_dark true; SUFFIX="-dark"; sleep 1.2
 fi
-POS=$(osascript -e "tell application \"System Events\"" -e "set p to first process whose unix id is $PID" -e "tell p to get {position, size} of window 1" -e "end tell" | tr -d ' ')
-X=${POS%%,*}; R=${POS#*,}; Y=${R%%,*}; R=${R#*,}; W=${R%%,*}; H=${R#*,}
 open -a "$APP"
-osascript -e "tell application \"System Events\"" -e "set p to first process whose unix id is $PID" -e "tell p to set frontmost to true" -e "end tell" >/dev/null
+osascript -e "tell application \"System Events\" to tell (first process whose unix id is $PID) to set frontmost to true" >/dev/null
 sleep 0.4
-# Compare PID, not just name, for the same reason as above: a same-named process being frontmost
-# would pass a name-only check while still being the wrong window.
-FRONT_PID=$(osascript -e 'tell application "System Events" to get unix id of first application process whose frontmost is true')
-FRONT_NAME=$(osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true')
-if [[ "$FRONT_PID" != "$PID" ]]; then
-  echo "abort: frontmost is $FRONT_NAME"
-  if [[ $DARK -eq 1 && "$WAS_DARK" == "false" ]]; then restore_dark false; fi
+# Capture by CGWindowID, NOT by screen rectangle. A rect capture races with focus: between reading
+# the frame and the shutter firing, anything can come forward, and the shutter then photographs
+# whatever sits at those coordinates — which has grabbed unrelated windows, including private ones,
+# four times in this project. A frontmost check before the capture does not close that race.
+# A window id belongs to one window owned by one PID and cannot photograph another.
+WID=$(swift "$(dirname "$0")/window-id.swift" "$PID" 2>/dev/null | tail -1)
+if [[ -z "$WID" || "$WID" == "0" ]]; then
+  echo "abort: no on-screen window for pid $PID"
   exit 3
 fi
-screencapture -x -R "$X,$Y,$W,$H" "build/captures/$LABEL$SUFFIX.png"
+screencapture -x -o -l"$WID" "build/captures/$LABEL$SUFFIX.png"
 if [[ $DARK -eq 1 && "$WAS_DARK" == "false" ]]; then restore_dark false; fi
 echo "build/captures/$LABEL$SUFFIX.png"
