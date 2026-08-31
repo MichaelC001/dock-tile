@@ -586,6 +586,14 @@ struct StackAppItem: View {
     let onLaunch: () -> Void
 
     @State private var isHovered = false
+    /// Hover over the remove badge itself. Tracked separately because the badge sits on top of the
+    /// cell: on macOS a child control with its own tracking region can end the parent's hover, and
+    /// with a single flag that ended the badge's own reason to exist mid-reach.
+    @State private var isHoveringRemove = false
+
+    /// Is the pointer anywhere on this cell, badge included? Drives BOTH the hover highlight and the
+    /// badge, so neither can flicker out while the user is reaching for the other.
+    private var isPointerInside: Bool { isHovered || isHoveringRemove }
 
     // Observe IconStyleManager for icon style changes
     // This triggers view refresh when system icon style changes
@@ -593,10 +601,26 @@ struct StackAppItem: View {
 
     /// Mouse hover uses the subtle Liquid-Glass fill (`.quaternary`) like typical Mac apps; the
     /// stronger accent is reserved for keyboard-focus selection (accessibility). Hover honours the
+    /// Breathing room each side of the app name, taken out of the cell's own width rather than
+    /// added to it — so the label ellipsises inside the tile and the panel's size is untouched.
+    private static let labelInset: CGFloat = 4
+
+    /// Diameter of the editor's hover remove badge.
+    private static let removeBadgeSize: CGFloat = 18
+    /// Nudge in from the cell's top-right corner: 0.5pt down, 0.5pt in — one physical pixel on a
+    /// Retina display.
+    ///
+    /// The badge must stay **entirely inside the cell** (critical). `isHovered` belongs to the cell,
+    /// and an `.overlay` that hangs past the cell's bounds is outside the cell's tracking area — so
+    /// reaching for a badge that overhangs the corner ends the hover and unmounts the badge under
+    /// the cursor, leaving it impossible to click. A positive inset keeps the whole badge within the
+    /// region that keeps it on screen.
+    private static let removeBadgeCornerInset: CGFloat = 0.5
+
     /// global "Highlight on Hover" toggle.
     private var highlightStyle: AnyShapeStyle {
         if isSelected { return AnyShapeStyle(Color(nsColor: .selectedContentBackgroundColor)) }
-        if highlightOnHover && isHovered { return AnyShapeStyle(.quaternary) }
+        if highlightOnHover && isPointerInside { return AnyShapeStyle(.quaternary) }
         return AnyShapeStyle(Color.clear)
     }
 
@@ -615,12 +639,18 @@ struct StackAppItem: View {
                 .frame(width: iconSize, height: iconSize)
 
             if showLabel {
-                // App name - truncated with ellipsis. Use hierarchical style for vibrancy.
+                // App name — one line, ellipsised in the middle so both ends stay readable
+                // ("GitHub…esktop" beats "GitHub Des…").
+                //
+                // The padding sits INSIDE the fixed width on purpose: the cell still occupies its
+                // full `cellWidth` column, but the name truncates a little earlier, so a long one
+                // ends with a margin inside the selection instead of running to its very edge.
                 Text(app.name)
                     .font(.system(size: 11, weight: .regular))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                     .truncationMode(.middle)
+                    .padding(.horizontal, Self.labelInset)
                     .frame(width: cellWidth)
             }
 
@@ -642,19 +672,40 @@ struct StackAppItem: View {
         .contentShape(Rectangle())
         .onHover { isHovered = $0 }
         .editingOnly(editing) { cell in
-            cell.overlay(alignment: .topLeading) {
-                if let editing, isHovered {
+            // Remove badge in the cell's TOP-RIGHT corner — the same side the list layout removes
+            // from. Inset rather than overhanging, for the tracking-area reason on
+            // `removeBadgeCornerInset`.
+            //
+            // **Mounted for as long as the editor is open, never conditionally (critical).** Only
+            // its opacity and hit testing follow the pointer. Adding and removing a view UNDER the
+            // cursor makes AppKit rebuild the tracking areas beneath it, and the resulting spurious
+            // exit dropped `isHovered` — which unmounted the badge mid-reach, taking the hover
+            // highlight with it and swallowing the click. Cross-fading a mounted view has no such
+            // effect.
+            cell.overlay(alignment: .topTrailing) {
+                if let editing {
                     Button { editing.onRemove(app) } label: {
                         Image(systemName: "xmark")
                             .font(.system(size: 8, weight: .heavy))
                             .foregroundStyle(.white)
-                            .frame(width: 18, height: 18)
+                            .frame(width: Self.removeBadgeSize, height: Self.removeBadgeSize)
                             .background(Color(nsColor: .tertiaryLabelColor), in: Circle())
                             .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
                     }
                     .buttonStyle(.plain)
+                    .help(AppStrings.PopoverOption.editingRemove)
                     .accessibilityLabel(AppStrings.PopoverOption.editingRemove)
-                    .offset(x: 2, y: -2)
+                    .offset(x: -Self.removeBadgeCornerInset, y: Self.removeBadgeCornerInset)
+                    .onHover { isHoveringRemove = $0 }
+                    .opacity(isPointerInside ? 1 : 0)
+                    // Hit testing is NOT gated on the hover state (critical). Gating it deadlocks:
+                    // the pointer moving onto the badge ends the CELL's hover, which would switch
+                    // hit testing off, so the badge could never receive the `onHover` above that
+                    // brings it back — it vanished under the cursor and stayed gone. Reaching the
+                    // badge requires moving the pointer onto it, which reveals it, so an invisible
+                    // badge is not something a user can click by accident.
+                    .accessibilityHidden(!isPointerInside)
+                    .animation(.easeOut(duration: 0.12), value: isPointerInside)
                 }
             }
         }
