@@ -78,6 +78,11 @@ magnification collapses; only its tail tracks, which nothing public can replicat
 - Mouse coordinate only for the axis parallel to the Dock (best icon-centre estimate without
   AX — which helpers can't get: per-binary TCC grants, regenerated bundles). NSPopover slides
   its arrow within the preferred edge near screen corners; no lateral compensation needed.
+- **One `NSPopover` per helper, for its whole life (critical)**: `FloatingPanel.popover` is a `let`.
+  On macOS 26 every `NSPopover` INSTANCE leaks its Liquid Glass backdrop (AppKit bug, 3–5 MB per
+  open); a new popover per click shipped through 2.0.1. Fresh *content* is attached per open and
+  released on close, so settings still re-read each click. Never construct a `FloatingPanel` or an
+  `NSPopover` per open. Details + repro: `docs/macos-26-popover-glass-leak.md`.
 - `NSVisualEffectView` with `.popover` material for native vibrancy
 - Keyboard navigation via `KeyboardCaptureView` (custom NSView)
 

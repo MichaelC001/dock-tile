@@ -48,6 +48,7 @@ Controlled via Info.plist variables (`DTEnvironment`, `DTHelperPrefix`, `DTPrefs
 - [Analytics](/.claude/rules/analytics.md) — Firebase Analytics + Crashlytics, consent gating, dSYM upload
 - [Website](/website/CLAUDE.md) — Marketing site (Next.js); own CLAUDE.md + rules in `website/.claude/rules/`. Keep app and website changes in separate sessions.
 - [Diagnostics](/.claude/rules/diagnostics.md) — Cross-process Copy Diagnostics, dev-verbose/prod-quiet, `ui()` click tracing, `measure()` workflow timing
+- [Performance Measurement](/.claude/rules/performance-measurement.md) — same-session A/B only, binary-swap a helper without a Dock restart, ten-open leak check
 - [Website Assets](/.claude/rules/website-assets.md) — Favicon/webp generation, screenshot blur placeholders
 
 ## Gates
