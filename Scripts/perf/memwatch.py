@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Temporary memory watcher for DEV tiles. Remove once there is enough data.
+"""Temporary memory watcher for DEV tiles. Kept on Karthik's dev Mac until ~2026-11-29, then
+reviewed and removed (issue #16). Dev-machine tooling only: never add it to the app target —
+DevToolingExclusionTests fails if project.pbxproj references it.
 
 Samples every running dev helper's footprint and IOSurface usage on a timer and correlates it with
 how many times the popover was opened, so the question "does a tile's memory creep with use?" gets

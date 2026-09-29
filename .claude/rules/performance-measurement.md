@@ -23,12 +23,21 @@ Paid for in the September 2026 perf cycle, where three baseline numbers failed t
   the counts of EVERY `Glass|Popover|IOSurface|CABackingStore|NSVisualEffect` heap class at 1 vs 8
   opens; a leak is any class that grows.
 
-## Temporary: dev-tile memory watcher (installed 2026-09-21, REMOVE when done)
+## Temporary: dev-tile memory watcher (installed 2026-09-21, KEEP until ~2026-11-29)
 
 `Scripts/perf/memwatch.py` samples every running **dev** helper's footprint, IOSurface use and
 popover-open count every 10 minutes via a per-user LaunchAgent (`com.docktile.dev.memwatch`), into
 `~/Library/Application Support/DockTile-Dev/memwatch.csv`. It exists to prove the 2.0.2 popover-reuse
 fix holds over days of real use, which a ten-open test cannot.
+
+**Karthik decided on 2026-09-29 to keep it collecting on his dev Mac for about two more months.**
+Do not uninstall it or `git rm` it before then, including as macOS 27 housekeeping. Review it around
+2026-11-29, then remove it (issue #16).
+
+**It cannot ship, and must stay that way.** It is a repo script plus a per-user LaunchAgent on one
+Mac; nothing in the app target references it, so it is never compiled or bundled (verified against
+the shipped 2.0.2 app). `DevToolingExclusionTests` fails if `project.pbxproj` ever references it.
+It reads only `DockTile-Dev/` paths and dev helper processes, never production data.
 
     python3 Scripts/perf/memwatch.py report      # read it
     python3 Scripts/perf/memwatch.py uninstall    # stop; --purge also deletes the CSV
@@ -39,6 +48,12 @@ after warm-up. Reviewed that day: no defect, fix holds; data is all on macOS 27 
 
 Deliberately OUTSIDE the app: no product code to strip from a release, and the tiles are not
 perturbed by their own instrumentation. Dev-only — popover-open lines are verbose, so they do not
-exist in Release logs, and production data is never read. **Remove it once a few hundred opens have
-accumulated across several days**; a `MB/100 opens` near zero is the pass. Leaving it installed
-forever is the failure mode this note guards against.
+exist in Release logs. Pass at review: `MB/100 opens` near zero after warm-up. Leaving it installed
+indefinitely past the review date is the failure mode this note guards against.
+
+Reading two months of data: dev tiles are rebuilt whenever the dev app changes, so rows span
+different code. Match row start times against `git log` before comparing one row with another.
+The report groups rows by tile and process ID, and helpers get low IDs at login, so over many
+reboots a reused ID can merge two processes into one row: an `uptime` that drops mid-row is the
+tell. The open count parses the helpers' "✔ Show popover" log line, so renaming it reads as zero
+opens, not as an error.
