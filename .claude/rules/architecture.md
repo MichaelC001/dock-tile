@@ -83,6 +83,10 @@ magnification collapses; only its tail tracks, which nothing public can replicat
   open); a new popover per click shipped through 2.0.1. Fresh *content* is attached per open and
   released on close, so settings still re-read each click. Never construct a `FloatingPanel` or an
   `NSPopover` per open. Details + repro: `docs/macos-26-popover-glass-leak.md`.
+  **Keep it on macOS 27+.** The leak no longer reproduces on macOS 27.0 (bare probe, 2026-09-29;
+  Apple's release notes mention no fix), but the deployment target is macOS 15 and macOS 26 users
+  still need the workaround; on 27 it costs nothing. Do not `#available`-gate it or remove it
+  while adopting macOS 27.
 - `NSVisualEffectView` with `.popover` material for native vibrancy
 - Keyboard navigation via `KeyboardCaptureView` (custom NSView)
 

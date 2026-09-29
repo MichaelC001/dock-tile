@@ -105,6 +105,11 @@ final class FloatingPanel: NSObject, NSPopoverDelegate {
     /// lifetime; keep it that way), nor a local `NSPopover()` elsewhere. The leak itself is
     /// invisible to unit tests (it lives in AppKit's graphics memory), so the check is a
     /// `footprint` measurement across ten opens: it must go flat after the first few.
+    ///
+    /// macOS 27: the leak no longer reproduces on 27.0 (bare probe, 2026-09-29). KEEP THIS ANYWAY:
+    /// do not gate it behind `#available(macOS 27, *)` or return to a popover per open. The
+    /// deployment target reaches back to macOS 15, macOS 26 users still leak without it, and one
+    /// reused popover costs nothing on 27.
     private let popover = NSPopover()
     private var anchorWindow: NSWindow?
     private var dismissObserver: NSObjectProtocol?
