@@ -103,3 +103,6 @@ promo-video/**
 
 # Vendored actool build artifacts (rebuilt via Scripts/build-compiler.sh)
 Vendor/actool/target/
+
+# User feedback (emails, screenshots, reply drafts) — personal data, never committed to this public repo
+docs/feedback/

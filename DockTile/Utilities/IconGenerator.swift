@@ -91,13 +91,23 @@ struct IconGenerator {
 
         let context = graphicsContext.cgContext
 
-        // Calculate corner radius based on size (proportional to icon size)
-        // 22.5% matches SwiftUI's DockTileIconPreview cornerRadius calculation
-        let cornerRadius = size.width * 0.225
+        let rect = CGRect(origin: .zero, size: size)
+        // The margin must stay transparent, so clear before drawing anything.
+        context.clear(rect)
+
+        // Icon-grid margin from the shared seam, exactly as the Tahoe fallback `.icns` bakes it.
+        // The Dock scales every icon to one tile size, so a full-bleed shape drew ~24 % larger
+        // than every neighbouring icon on macOS 15 (feedback 2026-09-30). The glyph below stays
+        // measured against the FULL canvas, matching the fallback and the layer PNGs.
+        // Guarded by `LegacyIcnsMarginTests`.
+        let inset = size.width * IconDepthMetrics.contentInsetRatio
+        let shapeRect = rect.insetBy(dx: inset, dy: inset)
+
+        // Corner radius is 22.5% of the SHAPE (matches DockTileIconPreview's cornerRadius)
+        let cornerRadius = shapeRect.width * 0.225
 
         // Create squircle path (continuous corners matching Tahoe guidelines)
-        let rect = CGRect(origin: .zero, size: size)
-        let squirclePath = createSquirclePath(in: rect, cornerRadius: cornerRadius)
+        let squirclePath = createSquirclePath(in: shapeRect, cornerRadius: cornerRadius)
 
         // Get appearance-aware colors. Dark style diverges by icon type (SF Symbol → tinted
         // glyph on neutral near-black; emoji → darkened-own-tint), so thread the type through.
@@ -109,7 +119,7 @@ struct IconGenerator {
             path: squirclePath,
             topColor: colors.backgroundTop,
             bottomColor: colors.backgroundBottom,
-            rect: rect
+            rect: shapeRect
         )
 
         // Draw beveled glass effect (inner stroke). Opacity + width come from the shared seam.
@@ -125,7 +135,7 @@ struct IconGenerator {
         drawSurfaceSheen(
             context: context,
             path: squirclePath,
-            rect: rect,
+            rect: shapeRect,
             alpha: IconDepthMetrics.surfaceSheenAlpha(style: iconStyle, nominalSize: size.width)
         )
 

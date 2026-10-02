@@ -13,6 +13,8 @@ on:
       - 'website/**'
       - 'vercel.json'
       - '*.md'
+  # Run on demand against any branch — e.g. to exercise the macOS 15 leg before a release.
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -24,11 +26,17 @@ env:
 
 jobs:
   build-and-test:
-    name: Build & Test
-    # Use macos-26 beta (Tahoe) to match local development environment
-    # Note: This is ARM64 only, beta status, "as-is" with no SLA
+    name: Build & Test (${{ matrix.os }})
+    # macos-26 (Tahoe) matches the local development environment — ARM64 only, "as-is", no SLA.
     # See: https://github.blog/changelog/2025-09-11-actions-macos-26-image-now-in-public-preview/
-    runs-on: macos-26
+    # macos-15 is the ONLY place the frozen legacy icon path (`IconPipeline.isDeclarative == false`:
+    # the 4-variant .icns bake + IconStyleManager detection) runs under test — no dev Mac is on 15.
+    # Its image ships Xcode 26.x, so the same macOS 26 SDK build runs there unchanged.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-26, macos-15]
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout
@@ -75,9 +83,9 @@ jobs:
           path: |
             ./build/SourcePackages
             ~/Library/Caches/org.swift.swiftpm
-          key: ${{ runner.os }}-spm-${{ hashFiles('DockTile.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          key: ${{ matrix.os }}-spm-${{ hashFiles('DockTile.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
           restore-keys: |
-            ${{ runner.os }}-spm-
+            ${{ matrix.os }}-spm-
 
       # Resolve up front with retries so a transient artifact-download blip (cache miss) retries
       # instead of failing the whole build. The build step below then reuses ./build/SourcePackages.
@@ -121,9 +129,9 @@ jobs:
           path: |
             Vendor/actool/target
             ~/.cargo/registry
-          key: ${{ runner.os }}-actool-cargo-${{ hashFiles('Vendor/actool/Cargo.lock') }}
+          key: ${{ matrix.os }}-actool-cargo-${{ hashFiles('Vendor/actool/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-actool-cargo-
+            ${{ matrix.os }}-actool-cargo-
 
       - name: Build icon compiler (docktile-actool)
         run: ./Scripts/build-compiler.sh
@@ -195,7 +203,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v5
         with:
-          name: build-logs
+          name: build-logs-${{ matrix.os }}
           path: |
             build.log
             test.log
@@ -204,6 +212,6 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v5
         with:
-          name: DockTile-Debug
+          name: DockTile-Debug-${{ matrix.os }}
           path: ./build/Build/Products/Debug/Dock Tile*.app
           retention-days: 7

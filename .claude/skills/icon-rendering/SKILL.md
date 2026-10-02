@@ -24,8 +24,8 @@ copy main bundle → `stripMainAppIcons` (Assets.car AND template icns MUST go �
 outranks `CFBundleIconFile`).
 
 **Legacy path (macOS 15 only now; frozen pre-Tahoe fallback):**
-`IconGenerator.generateIcns` bakes 4 full-bleed style variants (`AppIcon-{default,dark,clear,
-tinted}.icns`, 10 renditions each) → variant matching `IconStyle.current` copied to
+`IconGenerator.generateIcns` bakes 4 icon-grid-margined style variants (`AppIcon-{default,dark,
+clear,tinted}.icns`, 10 renditions each; full-bleed until 2.0.2 — `LegacyIcnsMarginTests`) → variant matching `IconStyle.current` copied to
 `AppIcon.icns` → ad-hoc sign → `touchBundle` + `LSRegisterURL` → Dock plist write
 (verify-after-write) → Dock restart. At runtime `IconStyleManager` (sole detector, KVO-primary,
 NO timers) detects style changes → `HelperBundleManager.switchIcon`: `replaceIconAtomically`
@@ -55,7 +55,7 @@ instead of the 4 variants).
 | Seam | Owns | Guarded by |
 |---|---|---|
 | `IconDepthMetrics` | glyph size ratio + safe-area caps (symbol 0.60 / emoji 0.67 / brand 0.78), stroke, sheens, shadows, `emojiInkFit`, `minDetailSize` gate (22px) | `IconDepthMetricsTests` |
-| `IconDepthMetrics.contentInsetRatio` | Apple's icon-grid margin (25/256 per side, content = 206/256 of canvas) — an ARTIFACT fact: consumed by the compiled `.icon`/car geometry and `IconGenerator.generateFallbackIcns` only. UI slots deliberately do NOT apply it — `DockTileIconPreview` fills its frame (2026-09-02 Task 6 reversal; a margined preview made every in-app icon read ~80% of its slot) | `IconPreviewGeometryTests` |
+| `IconDepthMetrics.contentInsetRatio` | Apple's icon-grid margin (25/256 per side, content = 206/256 of canvas) — an ARTIFACT fact: consumed by the compiled `.icon`/car geometry, `IconGenerator.generateFallbackIcns` and the legacy macOS 15 bake `IconGenerator.generateIcon` (since 2.0.3; `LegacyIcnsMarginTests`) only. UI slots deliberately do NOT apply it — `DockTileIconPreview` fills its frame (2026-09-02 Task 6 reversal; a margined preview made every in-app icon read ~80% of its slot) | `IconPreviewGeometryTests` |
 | `IconWeight` dual mappings | `fontWeight` (SwiftUI) and `nsFontWeight` (AppKit) MUST agree; emoji/brand ignore weight | `IconWeightTests` |
 | `IconStyle.resolve` | style string → style; absent → Default; unrecognised string OR non-string type → nil = don't act, NEVER Default | `IconStyleResolveTests` |
 | `IconGenerator.emojiInkMetrics` + `emojiInkFit` | emoji sized by measured artwork, never font em | `EmojiInkFitRenderTests` |
