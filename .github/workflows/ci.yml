@@ -15,6 +15,11 @@ on:
       - '*.md'
   # Run on demand against any branch — e.g. to exercise the macOS 15 leg before a release.
   workflow_dispatch:
+    inputs:
+      dock_check:
+        description: "Also pin baked legacy tiles to the macOS 15 runner's Dock, screenshot and measure it"
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -290,3 +295,58 @@ jobs:
         with:
           name: test-logs-macos-15
           path: test-macos-15.log
+
+  dock-check-macos-15:
+    name: Dock render check (macos-15, on demand)
+    # End-to-end evidence for the legacy `.icns` geometry: bake tiles with the real generator ON
+    # a macOS 15 host, pin them to that runner's Dock as stub bundles, screenshot the Dock and
+    # measure every icon's width (Scripts/ci/dock-check.sh). A full-bleed tile reads ~1.24× its
+    # neighbours; the check fails above 1.10×. Opt-in via the `dock_check` dispatch input because
+    # it rewrites the runner's Dock. Artifacts: dock.png, dock-window.png, measure.txt.
+    if: github.event_name == 'workflow_dispatch' && inputs.dock_check
+    needs: build-and-test
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download test products
+        uses: actions/download-artifact@v5
+        with:
+          name: test-products
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+          sw_vers
+          xcodebuild -version
+
+      - name: Unpack test products
+        run: tar -xzf test-products.tgz
+
+      - name: Bake legacy tile icons on this host
+        run: |
+          set -o pipefail
+          mkdir -p "$PWD/dock-check/fixtures"
+          TEST_RUNNER_DOCKTILE_ICNS_FIXTURE_DIR="$PWD/dock-check/fixtures" \
+          xcodebuild test-without-building \
+            -xctestrun "$(ls Products/*.xctestrun | head -1)" \
+            -destination 'platform=macOS' \
+            -only-testing:DockTileTests/LegacyIcnsDockFixtureTests \
+            2>&1 | tee bake.log | xcpretty --color || (cat bake.log && exit 1)
+          ls -lR dock-check/fixtures
+
+      - name: Pin the tiles to the Dock, capture and measure
+        run: Scripts/ci/dock-check.sh "$PWD/dock-check"
+
+      - name: Upload Dock capture
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: dock-check-macos-15
+          path: |
+            dock-check/dock.png
+            dock-check/dock-window.png
+            dock-check/measure.txt
+          retention-days: 14

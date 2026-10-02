@@ -19,6 +19,15 @@ zip: `upload-artifact` drops the symlinks inside embedded frameworks), and the m
 `xcodebuild test-without-building -xctestrun …`. Keep that leg green before merging anything that
 ships to macOS 15; a Tahoe-only test must `#available`-gate itself rather than drop the leg.
 
+**Dock render check (on demand):** `gh workflow run ci.yml --ref <branch> -f dock_check=true`
+adds `dock-check-macos-15`, which bakes legacy tiles with the real generator on the macOS 15
+runner (`LegacyIcnsDockFixtureTests`, enabled only by `TEST_RUNNER_DOCKTILE_ICNS_FIXTURE_DIR`),
+pins them to that runner's Dock as stub bundles, screenshots the Dock and measures every icon's
+width (`Scripts/ci/dock-check.sh` + `dock-measure.swift`; fails above 1.10× the median — a
+full-bleed tile reads ~1.24×). Artifacts: `dock.png`, `dock-window.png`, `measure.txt`. The
+measurer alone is safe locally (`swift Scripts/ci/dock-measure.swift out.png` captures the Dock
+window by ID, never a screen rect); the shell script rewrites the Dock and refuses to run off CI.
+
 **SwiftPM caching + resolve-retry (flaky-build fix)**: every build/test job caches `./build/SourcePackages` + `~/Library/Caches/org.swift.swiftpm` (keyed on `Package.resolved`) and runs a `-resolvePackageDependencies` step with retries **before** building. Firebase ships large binary xcframeworks (e.g. `grpc`) as binary targets downloaded during resolution; without this, every run re-downloaded them and a transient "network connection was lost" failed the build. A cache hit skips the download entirely; a cache miss retries (4×). A Firebase/dependency bump changes `Package.resolved` → first run is a cache miss (slower) that repopulates.
 
 ## Release Pipeline
