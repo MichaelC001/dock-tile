@@ -126,11 +126,17 @@ struct IconStrokeGeometryTests {
         return try #require(image.representations.compactMap { $0 as? NSBitmapImageRep }.first)
     }
 
-    /// The exact squircle the generator fills (same construction as `createSquirclePath`).
+    /// The icon-grid margin the bake leaves transparent (100 px at 1024 — see
+    /// `LegacyIcnsMarginTests`); the shape's top edge is this many rows down.
+    private static let inset = Int(CGFloat(px) * IconDepthMetrics.contentInsetRatio)
+
+    /// The exact squircle the generator fills (same construction as `createSquirclePath`:
+    /// the icon-grid-inset rect, corner radius 22.5 % of the SHAPE).
     private func squircle() -> CGPath {
         let side = CGFloat(Self.px)
         let rect = CGRect(x: 0, y: 0, width: side, height: side)
-        return RoundedRectangle(cornerRadius: side * 0.225, style: .continuous)
+            .insetBy(dx: CGFloat(Self.inset), dy: CGFloat(Self.inset))
+        return RoundedRectangle(cornerRadius: rect.width * 0.225, style: .continuous)
             .path(in: rect).cgPath
     }
 
@@ -140,24 +146,25 @@ struct IconStrokeGeometryTests {
         let path = squircle()
         let side = CGFloat(Self.px)
         let centre = CGPoint(x: side / 2, y: side / 2)
-        // Corner boxes: the only region where "outside the squircle" is still on the canvas.
-        let box = Int(side * 0.225) + 12
-        var offenders: [(Int, Int, CGFloat)] = []
+        // The whole canvas: with the icon-grid margin, "outside the squircle" is on the canvas
+        // along every edge, not only at the corners — a halo on a straight edge now shows too.
+        let data = try #require(rep.bitmapData)
+        let bytesPerPixel = rep.bitsPerPixel / 8
+        var offenders: [(Int, Int, UInt8)] = []
 
-        for (originX, originY) in [(0, 0), (Self.px - box, 0), (0, Self.px - box), (Self.px - box, Self.px - box)] {
-            for y in originY..<(originY + box) {
-                for x in originX..<(originX + box) {
-                    guard let colour = rep.colorAt(x: x, y: y), colour.alphaComponent >= 0.25 else { continue }
-                    let point = CGPoint(x: CGFloat(x) + 0.5, y: CGFloat(y) + 0.5)
-                    guard !path.contains(point) else { continue }
-                    // Anti-aliasing of the fill itself can tint a pixel whose centre sits a
-                    // fraction outside the edge; a full pixel-width beyond it cannot be AA.
-                    let dx = centre.x - point.x, dy = centre.y - point.y
-                    let length = max(1e-6, (dx * dx + dy * dy).squareRoot())
-                    let inward = CGPoint(x: point.x + dx / length, y: point.y + dy / length)
-                    if !path.contains(inward) {
-                        offenders.append((x, y, colour.alphaComponent))
-                    }
+        for y in 0..<Self.px {
+            for x in 0..<Self.px {
+                let alpha = data[y * rep.bytesPerRow + x * bytesPerPixel + (bytesPerPixel - 1)]
+                guard alpha >= 64 else { continue }
+                let point = CGPoint(x: CGFloat(x) + 0.5, y: CGFloat(y) + 0.5)
+                guard !path.contains(point) else { continue }
+                // Anti-aliasing of the fill itself can tint a pixel whose centre sits a
+                // fraction outside the edge; a full pixel-width beyond it cannot be AA.
+                let dx = centre.x - point.x, dy = centre.y - point.y
+                let length = max(1e-6, (dx * dx + dy * dy).squareRoot())
+                let inward = CGPoint(x: point.x + dx / length, y: point.y + dy / length)
+                if !path.contains(inward) {
+                    offenders.append((x, y, alpha))
                 }
             }
         }
@@ -169,6 +176,7 @@ struct IconStrokeGeometryTests {
     func innerStrokeSpansFullLineWidth() throws {
         let rep = try rasterisedTile()
         let mid = Self.px / 2
+        let top = Self.inset   // first row of the shape, below the transparent margin
         // strokeLineWidth(1024) = 3.2pt. An inner stroke covers rows 0…3.2 below the top edge;
         // an unclipped CENTRE stroke covers only 0…1.6, leaving row 2 at plain background.
         #expect(IconDepthMetrics.strokeLineWidth(nominalSize: 1024) == 3.2)
@@ -180,9 +188,9 @@ struct IconStrokeGeometryTests {
             let colour = try #require(rep.colorAt(x: mid, y: y)?.usingColorSpace(.sRGB))
             return min(colour.redComponent, min(colour.greenComponent, colour.blueComponent))
         }
-        let body = try whiteness(40)          // well below the stroke: plain gradient
-        let rimTop = try whiteness(0) - body  // inside the stroke either way
-        let rimRow2 = try whiteness(2) - body // inside the stroke ONLY when it is inner
+        let body = try whiteness(top + 40)          // well below the stroke: plain gradient
+        let rimTop = try whiteness(top) - body      // inside the stroke either way
+        let rimRow2 = try whiteness(top + 2) - body // inside the stroke ONLY when it is inner
 
         // A 0.5-alpha white line lifts the low channels by ~0.4; a row the stroke never
         // reaches lifts by ~0.

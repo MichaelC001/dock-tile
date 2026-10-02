@@ -55,10 +55,13 @@ clearly visible raised glass square. The single-layer emoji model was kept; the 
 
 **Geometry change**: the compiled `.icon` renders at Apple's icon-grid proportions — the icon
 shape occupies 206 of a 256-unit canvas (content = `1 − 2 × contentInsetRatio` ≈ 0.805 of
-canvas), leaving a transparent margin, versus the legacy path's full-bleed square. This is a
-visible size change for every existing user (~80% of the old visual size) and lands for every
-tile in one Dock restart on the next migration. `IconDepthMetrics.contentInsetRatio` is the one
-number both the fallback `.icns` and the live preview read — see the seam table in
+canvas), leaving a transparent margin, versus the full-bleed square every tile had before. This
+is a visible size change for every existing user (~80% of the old visual size) and lands for
+every tile in one Dock restart on the next migration. The legacy macOS 15 bake stayed full-bleed
+through 2.0.2 — a macOS 15 user reported the tile ~24% larger than every neighbouring icon
+(2026-09-30, measured 114 px vs 90 px) — and now insets by the same seam (see "Shape" below).
+`IconDepthMetrics.contentInsetRatio` is the one number the legacy bake, the fallback `.icns` and
+the live preview read — see the seam table in
 [the icon-rendering skill](../skills/icon-rendering/SKILL.md).
 
 **Migration/self-heal**: `helperIconsComplete` checks for `Assets.car` + the fallback `.icns` on
@@ -80,7 +83,7 @@ Frozen: this describes the pre-Tahoe 4-variant bake, unchanged by the declarativ
 where noted. Most of it is shared drawing machinery the declarative path's lean layer renderer
 also calls into.
 
-**Shape**: Continuous corners (squircle) via `RoundedRectangle(.continuous)`, radius = 22.5% of width. **Full-bleed** — the legacy bake does not apply the icon-grid margin (`contentInsetRatio`); only the Tahoe fallback `.icns` and the live preview do (both, on every macOS version — see the seam table).
+**Shape**: Continuous corners (squircle) via `RoundedRectangle(.continuous)`, radius = 22.5% of the shape's width. **On the icon grid, like the Tahoe fallback `.icns`** — the shape is inset by `IconDepthMetrics.contentInsetRatio` on a cleared canvas, and the glyph stays measured against the FULL canvas (so the two bakes place it identically). It shipped **full-bleed** through 2.0.2: the Dock scales every icon to one tile size, so a macOS 15 tile drew ~24% larger than every neighbour (feedback 2026-09-30). Guarded by `LegacyIcnsMarginTests` — mid-edge transparent in all four styles, opaque extent equal to a real system icon's (Finder at 1024 px), max-scale glyphs inside the inset shape. The live preview deliberately does NOT inset (a UI slot has no neighbours — see the seam table).
 
 **Background**: Linear gradient from `TintColor.colorTop` to `colorBottom`.
 

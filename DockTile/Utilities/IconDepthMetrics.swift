@@ -152,9 +152,11 @@ enum IconDepthMetrics {
 
     /// Apple's icon-grid proportion: the icon shape occupies 206 of a 256-unit canvas, leaving a
     /// transparent margin all round. This describes how the Dock composes a compiled icon among
-    /// its NEIGHBOURS — an artifact fact, not a UI-slot fact. Its two real consumers are the
-    /// compiled `.icon`'s own geometry (the system applies it) and
-    /// `IconGenerator.generateFallbackIcns` (bakes it explicitly). UI slots — the live preview,
+    /// its NEIGHBOURS — an artifact fact, not a UI-slot fact. Its real consumers are the
+    /// compiled `.icon`'s own geometry (the system applies it), `IconGenerator.generateFallbackIcns`
+    /// and the legacy macOS 15 bake `IconGenerator.generateIcon` (both bake it explicitly; the
+    /// legacy bake shipped full-bleed through 2.0.2, drawing ~24 % larger than every neighbouring
+    /// Dock icon — `LegacyIcnsMarginTests`). UI slots — the live preview,
     /// sidebar rows, the tile editor canvas — deliberately do NOT apply it (decision 2026-09-02,
     /// Task 6 of docs/superpowers/plans/2026-09-02-appearance-environment.md): a UI slot has no
     /// neighbours to compose among, so the margin there just read as the icon shrinking. Shared

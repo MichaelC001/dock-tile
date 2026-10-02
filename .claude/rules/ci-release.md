@@ -7,7 +7,26 @@
 | `ci.yml` | Push to main/develop, PRs | Build + unit tests |
 | `release.yml` | Tag push (v*) | Build, sign, notarize, GitHub Release |
 
-Both use `macos-26` beta runners (ARM64 only). `paths-ignore` skips CI on website/docs-only changes. Vercel uses `ignoreCommand` in `vercel.json` to skip on Xcode-only changes.
+Both use `macos-26` beta runners (ARM64 only). `paths-ignore` skips CI on website/docs-only changes. Vercel uses `ignoreCommand` in `vercel.json` to skip on Xcode-only changes. `ci.yml` also has `workflow_dispatch`, so any branch can be run on demand (`gh workflow run ci.yml --ref <branch>`).
+
+**The project cannot be BUILT on a macOS 15 host (verified 2026-10-02).** The main app icon is
+an Icon Composer `.icon` document, and Xcode 26's `actool` crashes compiling it on macOS 15
+("IBPlatformToolFailureException … AssetCatalogAgent closed the connection"), even with Xcode 26.2
+selected. So the macOS 15 leg — the only place the frozen legacy icon path
+(`IconPipeline.isDeclarative == false`) ever runs under test — is a separate `test-macos-15` job:
+`build-and-test` (macos-26) runs `xcodebuild build-for-testing`, tars `Build/Products` (tar, not
+zip: `upload-artifact` drops the symlinks inside embedded frameworks), and the macos-15 job runs
+`xcodebuild test-without-building -xctestrun …`. Keep that leg green before merging anything that
+ships to macOS 15; a Tahoe-only test must `#available`-gate itself rather than drop the leg.
+
+**Dock render check (on demand):** `gh workflow run ci.yml --ref <branch> -f dock_check=true`
+adds `dock-check-macos-15`, which bakes legacy tiles with the real generator on the macOS 15
+runner (`LegacyIcnsDockFixtureTests`, enabled only by `TEST_RUNNER_DOCKTILE_ICNS_FIXTURE_DIR`),
+pins them to that runner's Dock as stub bundles, screenshots the Dock and measures every icon's
+width (`Scripts/ci/dock-check.sh` + `dock-measure.swift`; fails above 1.10× the median — a
+full-bleed tile reads ~1.24×). Artifacts: `dock.png`, `dock-window.png`, `measure.txt`. The
+measurer alone is safe locally (`swift Scripts/ci/dock-measure.swift out.png` captures the Dock
+window by ID, never a screen rect); the shell script rewrites the Dock and refuses to run off CI.
 
 **SwiftPM caching + resolve-retry (flaky-build fix)**: every build/test job caches `./build/SourcePackages` + `~/Library/Caches/org.swift.swiftpm` (keyed on `Package.resolved`) and runs a `-resolvePackageDependencies` step with retries **before** building. Firebase ships large binary xcframeworks (e.g. `grpc`) as binary targets downloaded during resolution; without this, every run re-downloaded them and a transient "network connection was lost" failed the build. A cache hit skips the download entirely; a cache miss retries (4×). A Firebase/dependency bump changes `Package.resolved` → first run is a cache miss (slower) that repopulates.
 

@@ -13,6 +13,13 @@ on:
       - 'website/**'
       - 'vercel.json'
       - '*.md'
+  # Run on demand against any branch — e.g. to exercise the macOS 15 leg before a release.
+  workflow_dispatch:
+    inputs:
+      dock_check:
+        description: "Also pin baked legacy tiles to the macOS 15 runner's Dock, screenshot and measure it"
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -24,10 +31,14 @@ env:
 
 jobs:
   build-and-test:
-    name: Build & Test
+    name: Build & Test (macos-26)
     # Use macos-26 beta (Tahoe) to match local development environment
     # Note: This is ARM64 only, beta status, "as-is" with no SLA
     # See: https://github.blog/changelog/2025-09-11-actions-macos-26-image-now-in-public-preview/
+    # This is also the ONLY host that can build the project: the main app icon is an Icon Composer
+    # `.icon` document, and Xcode 26's actool crashes compiling it on a macOS 15 host
+    # ("AssetCatalogAgent closed the connection", verified 2026-10-02 on macos-15 + Xcode 26.2).
+    # macOS 15 is tested by `test-macos-15` below, from the products this job builds.
     runs-on: macos-26
 
     steps:
@@ -207,3 +218,135 @@ jobs:
           name: DockTile-Debug
           path: ./build/Build/Products/Debug/Dock Tile*.app
           retention-days: 7
+
+      # Products for the macOS 15 leg: the test host app + xctest bundle + .xctestrun, built here
+      # (incremental on the DerivedData above) and run on a macOS 15 host with
+      # `test-without-building`. Tarred, not zipped: upload-artifact drops symlinks, which would
+      # break the embedded frameworks (Sparkle's Versions/A layout). dSYMs excluded for size.
+      - name: Build for testing (macOS 15 leg)
+        run: |
+          set -o pipefail
+          xcodebuild build-for-testing \
+            -project $PROJECT \
+            -scheme $SCHEME \
+            -configuration Debug \
+            -destination 'platform=macOS' \
+            -derivedDataPath ./build \
+            CODE_SIGNING_ALLOWED='NO' \
+            ENABLE_TESTABILITY=YES \
+            2>&1 | tee build-for-testing.log | xcpretty --color || (cat build-for-testing.log && exit 1)
+          ls ./build/Build/Products/*.xctestrun
+          tar --exclude='*.dSYM' -czf test-products.tgz -C ./build/Build Products
+
+      - name: Upload test products
+        uses: actions/upload-artifact@v5
+        with:
+          name: test-products
+          path: test-products.tgz
+          retention-days: 1
+
+  test-macos-15:
+    name: Unit Tests (macos-15, test-without-building)
+    # The frozen legacy icon path (`IconPipeline.isDeclarative == false`: the 4-variant .icns bake +
+    # IconStyleManager detection) runs ONLY on macOS 15, and no dev Mac is on 15 — this leg is the
+    # only place it executes under test. The project cannot be built here (see build-and-test), so
+    # the products built on macos-26 are run with `test-without-building`; the image ships Xcode
+    # 26.x, so the same toolchain drives the run. Must be green before a release that still
+    # supports macOS 15 is merged.
+    needs: build-and-test
+    runs-on: macos-15
+
+    steps:
+      # Several suites read the SOURCE tree through `#filePath` (the string catalogs, the SF
+      # Symbol literal sweep, project.pbxproj, helper fixtures). GitHub lays every runner out at
+      # the same /Users/runner/work/<repo>/<repo> path, so a checkout here makes those compiled-in
+      # paths resolve on this host too. Without it 11 tests fail with missing files (run 36952618762).
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download test products
+        uses: actions/download-artifact@v5
+        with:
+          name: test-products
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+          sw_vers
+          xcodebuild -version
+
+      - name: Unpack test products
+        run: |
+          tar -xzf test-products.tgz
+          ls Products/*.xctestrun
+
+      - name: Run Unit Tests (without building)
+        run: |
+          set -o pipefail
+          xcodebuild test-without-building \
+            -xctestrun "$(ls Products/*.xctestrun | head -1)" \
+            -destination 'platform=macOS' \
+            -only-testing:DockTileTests \
+            2>&1 | tee test-macos-15.log | xcpretty --color || (cat test-macos-15.log && exit 1)
+
+      - name: Upload Test Log
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: test-logs-macos-15
+          path: test-macos-15.log
+
+  dock-check-macos-15:
+    name: Dock render check (macos-15, on demand)
+    # End-to-end evidence for the legacy `.icns` geometry: bake tiles with the real generator ON
+    # a macOS 15 host, pin them to that runner's Dock as stub bundles, screenshot the Dock and
+    # measure every icon's width (Scripts/ci/dock-check.sh). A full-bleed tile reads ~1.24× its
+    # neighbours; the check fails above 1.10×. Opt-in via the `dock_check` dispatch input because
+    # it rewrites the runner's Dock. Artifacts: dock.png, dock-window.png, measure.txt.
+    if: github.event_name == 'workflow_dispatch' && inputs.dock_check
+    needs: build-and-test
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download test products
+        uses: actions/download-artifact@v5
+        with:
+          name: test-products
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+          sw_vers
+          xcodebuild -version
+
+      - name: Unpack test products
+        run: tar -xzf test-products.tgz
+
+      - name: Bake legacy tile icons on this host
+        run: |
+          set -o pipefail
+          mkdir -p "$PWD/dock-check/fixtures"
+          TEST_RUNNER_DOCKTILE_ICNS_FIXTURE_DIR="$PWD/dock-check/fixtures" \
+          xcodebuild test-without-building \
+            -xctestrun "$(ls Products/*.xctestrun | head -1)" \
+            -destination 'platform=macOS' \
+            -only-testing:DockTileTests/LegacyIcnsDockFixtureTests \
+            2>&1 | tee bake.log | xcpretty --color || (cat bake.log && exit 1)
+          ls -lR dock-check/fixtures
+
+      - name: Pin the tiles to the Dock, capture and measure
+        run: Scripts/ci/dock-check.sh "$PWD/dock-check"
+
+      - name: Upload Dock capture
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: dock-check-macos-15
+          path: |
+            dock-check/dock.png
+            dock-check/dock-window.png
+            dock-check/measure.txt
+          retention-days: 14
