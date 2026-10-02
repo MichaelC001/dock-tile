@@ -7,7 +7,7 @@
 | `ci.yml` | Push to main/develop, PRs | Build + unit tests |
 | `release.yml` | Tag push (v*) | Build, sign, notarize, GitHub Release |
 
-Both use `macos-26` beta runners (ARM64 only). `paths-ignore` skips CI on website/docs-only changes. Vercel uses `ignoreCommand` in `vercel.json` to skip on Xcode-only changes. `ci.yml` also has `workflow_dispatch`, so any branch can be run on demand (`gh workflow run ci.yml --ref <branch>`).
+Both build on `macos-26` beta runners (ARM64 only); `ci.yml` additionally tests on `macos-15` (below). `paths-ignore` skips CI on website/docs-only changes. Vercel uses `ignoreCommand` in `vercel.json` to skip on Xcode-only changes. `ci.yml` also has `workflow_dispatch`, so any branch can be run on demand (`gh workflow run ci.yml --ref <branch>`).
 
 **The project cannot be BUILT on a macOS 15 host (verified 2026-10-02).** The main app icon is
 an Icon Composer `.icon` document, and Xcode 26's `actool` crashes compiling it on macOS 15
@@ -117,6 +117,16 @@ git tag -a v1.x.x -m "Release 1.x.x" && git push origin v1.x.x
 - Upload DMG + SHA256 as release assets
 
 **`sparkle:version`** (build number) is read from `CURRENT_PROJECT_VERSION` in `Base.xcconfig` — not derived from the marketing version.
+
+**Notary preflight (first step of `release.yml`, since 2026-10-03).** Apple's notary service
+answers every request with HTTP 403 "A required agreement is missing or has expired" while a
+developer agreement is unsigned or the membership has lapsed. 2.0.3 failed twice at "Notarize
+DMG" for this, 15 minutes into each run, with nothing published. The workflow now runs
+`xcrun notarytool history` with the release credentials before the tests, so that state stops the
+run in seconds. The same probe works locally and is the thing to run BEFORE tagging and before
+re-running a failed release: `xcrun notarytool history --keychain-profile "DockTile-Notarization"`.
+Only the Account Holder can accept the agreement (developer.apple.com/account, then App Store
+Connect > Business); it took a few minutes to reach the notary service.
 
 **No manual steps needed** for Sparkle signing, appcast editing, or release note writing. Edit the GitHub Release notes after creation if you want to polish them.
 

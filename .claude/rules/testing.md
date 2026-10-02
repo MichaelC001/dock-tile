@@ -78,6 +78,13 @@ the regression into a compile error, which no test can beat. State plainly where
 guarantee stops — definite initialisation catches a naive reorder, not a placeholder-then-real-
 assignment restructure.
 
+**A CI check is a guard too, and green is not evidence (2026-10-02).** The first Dock render
+check went green while its measurement was INCONCLUSIVE: the measurer could not separate the
+icons and exited 0. A check that cannot measure must exit non-zero, and its verdict is read from
+what it measured (`measure.txt`), never from the job colour. Same family: an expectation computed
+from the thing under test (`== IconPipeline.isDeclarative`) cannot catch that thing regressing —
+keep one independent pin beside it.
+
 ## Coverage Targets
 
 | Component | Target |
@@ -113,4 +120,10 @@ migration/regeneration + missing-app scan — migration once corrupted a tile mi
 
 ## CI
 
-Unit tests run in GitHub Actions (`ci.yml`). UI/integration tests run locally only.
+Unit tests run in GitHub Actions (`ci.yml`) on **two hosts**: macos-26, where the project is
+built, and macos-15 via `test-without-building` — the only host that runs the legacy icon path
+(see [CI & Release](ci-release.md)). So a test must not assume its host: no expectation
+hard-coded to the macOS 26 pipeline (follow `IconPipeline.isDeclarative`, or `#available`-gate
+the test), and a test that reads the source tree through `#filePath` works on macOS 15 only
+because that job checks the repo out at the same path. The first macOS 15 run failed 11 tests for
+exactly these two reasons. UI/integration tests run locally only.

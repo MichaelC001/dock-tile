@@ -71,3 +71,9 @@ Before using platform-specific APIs:
 2. Verify SDK version matches local environment
 3. Add `@available` checks with fallback implementations
 4. Test locally AND in CI before merging
+
+## User feedback is personal data
+
+Emails, screenshots and reply drafts from users live in `docs/feedback/`, which is gitignored.
+This repo is public: never commit them, and never put a reporter's name or address in a tracked
+file or a commit message. Describe the report instead ("a macOS 15.6 user reported…").
