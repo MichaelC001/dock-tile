@@ -26,17 +26,15 @@ env:
 
 jobs:
   build-and-test:
-    name: Build & Test (${{ matrix.os }})
-    # macos-26 (Tahoe) matches the local development environment — ARM64 only, "as-is", no SLA.
+    name: Build & Test (macos-26)
+    # Use macos-26 beta (Tahoe) to match local development environment
+    # Note: This is ARM64 only, beta status, "as-is" with no SLA
     # See: https://github.blog/changelog/2025-09-11-actions-macos-26-image-now-in-public-preview/
-    # macos-15 is the ONLY place the frozen legacy icon path (`IconPipeline.isDeclarative == false`:
-    # the 4-variant .icns bake + IconStyleManager detection) runs under test — no dev Mac is on 15.
-    # Its image ships Xcode 26.x, so the same macOS 26 SDK build runs there unchanged.
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-26, macos-15]
-    runs-on: ${{ matrix.os }}
+    # This is also the ONLY host that can build the project: the main app icon is an Icon Composer
+    # `.icon` document, and Xcode 26's actool crashes compiling it on a macOS 15 host
+    # ("AssetCatalogAgent closed the connection", verified 2026-10-02 on macos-15 + Xcode 26.2).
+    # macOS 15 is tested by `test-macos-15` below, from the products this job builds.
+    runs-on: macos-26
 
     steps:
       - name: Checkout
@@ -83,9 +81,9 @@ jobs:
           path: |
             ./build/SourcePackages
             ~/Library/Caches/org.swift.swiftpm
-          key: ${{ matrix.os }}-spm-${{ hashFiles('DockTile.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          key: ${{ runner.os }}-spm-${{ hashFiles('DockTile.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
           restore-keys: |
-            ${{ matrix.os }}-spm-
+            ${{ runner.os }}-spm-
 
       # Resolve up front with retries so a transient artifact-download blip (cache miss) retries
       # instead of failing the whole build. The build step below then reuses ./build/SourcePackages.
@@ -129,9 +127,9 @@ jobs:
           path: |
             Vendor/actool/target
             ~/.cargo/registry
-          key: ${{ matrix.os }}-actool-cargo-${{ hashFiles('Vendor/actool/Cargo.lock') }}
+          key: ${{ runner.os }}-actool-cargo-${{ hashFiles('Vendor/actool/Cargo.lock') }}
           restore-keys: |
-            ${{ matrix.os }}-actool-cargo-
+            ${{ runner.os }}-actool-cargo-
 
       - name: Build icon compiler (docktile-actool)
         run: ./Scripts/build-compiler.sh
@@ -203,7 +201,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v5
         with:
-          name: build-logs-${{ matrix.os }}
+          name: build-logs
           path: |
             build.log
             test.log
@@ -212,6 +210,76 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v5
         with:
-          name: DockTile-Debug-${{ matrix.os }}
+          name: DockTile-Debug
           path: ./build/Build/Products/Debug/Dock Tile*.app
           retention-days: 7
+
+      # Products for the macOS 15 leg: the test host app + xctest bundle + .xctestrun, built here
+      # (incremental on the DerivedData above) and run on a macOS 15 host with
+      # `test-without-building`. Tarred, not zipped: upload-artifact drops symlinks, which would
+      # break the embedded frameworks (Sparkle's Versions/A layout). dSYMs excluded for size.
+      - name: Build for testing (macOS 15 leg)
+        run: |
+          set -o pipefail
+          xcodebuild build-for-testing \
+            -project $PROJECT \
+            -scheme $SCHEME \
+            -configuration Debug \
+            -destination 'platform=macOS' \
+            -derivedDataPath ./build \
+            CODE_SIGNING_ALLOWED='NO' \
+            ENABLE_TESTABILITY=YES \
+            2>&1 | tee build-for-testing.log | xcpretty --color || (cat build-for-testing.log && exit 1)
+          ls ./build/Build/Products/*.xctestrun
+          tar --exclude='*.dSYM' -czf test-products.tgz -C ./build/Build Products
+
+      - name: Upload test products
+        uses: actions/upload-artifact@v5
+        with:
+          name: test-products
+          path: test-products.tgz
+          retention-days: 1
+
+  test-macos-15:
+    name: Unit Tests (macos-15, test-without-building)
+    # The frozen legacy icon path (`IconPipeline.isDeclarative == false`: the 4-variant .icns bake +
+    # IconStyleManager detection) runs ONLY on macOS 15, and no dev Mac is on 15 — this leg is the
+    # only place it executes under test. The project cannot be built here (see build-and-test), so
+    # the products built on macos-26 are run with `test-without-building`; the image ships Xcode
+    # 26.x, so the same toolchain drives the run. Must be green before a release that still
+    # supports macOS 15 is merged.
+    needs: build-and-test
+    runs-on: macos-15
+
+    steps:
+      - name: Download test products
+        uses: actions/download-artifact@v5
+        with:
+          name: test-products
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+          sw_vers
+          xcodebuild -version
+
+      - name: Unpack test products
+        run: |
+          tar -xzf test-products.tgz
+          ls Products/*.xctestrun
+
+      - name: Run Unit Tests (without building)
+        run: |
+          set -o pipefail
+          xcodebuild test-without-building \
+            -xctestrun "$(ls Products/*.xctestrun | head -1)" \
+            -destination 'platform=macOS' \
+            -only-testing:DockTileTests \
+            2>&1 | tee test-macos-15.log | xcpretty --color || (cat test-macos-15.log && exit 1)
+
+      - name: Upload Test Log
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: test-logs-macos-15
+          path: test-macos-15.log
