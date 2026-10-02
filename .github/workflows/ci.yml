@@ -358,6 +358,7 @@ jobs:
         with:
           name: dock-check-macos-15
           path: |
+            dock-check/dock-before.png
             dock-check/dock.png
             dock-check/dock-window.png
             dock-check/measure.txt

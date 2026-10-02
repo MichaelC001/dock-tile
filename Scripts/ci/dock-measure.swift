@@ -19,7 +19,14 @@ let args = CommandLine.arguments
 guard args.count >= 2 else { print("usage: dock-measure <capture.png> [--measure-only] [--count-only] [--expect-apps N]"); exit(2) }
 let out = args[1]
 let countOnly = args.contains("--count-only")
-let expectApps: Int? = args.firstIndex(of: "--expect-apps").flatMap { i in i + 1 < args.count ? Int(args[i + 1]) : nil }
+// A malformed value is a usage error, never a silently skipped check.
+let expectApps: Int? = {
+    guard let i = args.firstIndex(of: "--expect-apps") else { return nil }
+    guard i + 1 < args.count, let n = Int(args[i + 1]) else {
+        print("usage: --expect-apps needs an integer (got '\(i + 1 < args.count ? args[i + 1] : "")')"); exit(2)
+    }
+    return n
+}()
 
 /// Diagnostics go to stdout normally, and to stderr in `--count-only` mode so the caller can
 /// capture the bare number.
