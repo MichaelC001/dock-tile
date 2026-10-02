@@ -24,6 +24,29 @@ jobs:
     runs-on: macos-26
 
     steps:
+      # FIRST, before anything slow: fail in seconds, not after the tests and a 15-minute build.
+      # Apple's notary service refuses every request with HTTP 403 "A required agreement is
+      # missing or has expired" while a developer agreement is unsigned or the membership has
+      # lapsed — the 2.0.3 release failed twice at "Notarize DMG" for exactly this (2026-10-03).
+      # `notarytool history` is read-only and uses the same credentials as the real submission,
+      # so it also catches a revoked app-specific password. Its output (past submissions) is
+      # never printed on success.
+      - name: Preflight — Apple notary account
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if ! OUTPUT=$(xcrun notarytool history \
+                --apple-id "$APPLE_ID" \
+                --team-id "$APPLE_TEAM_ID" \
+                --password "$APPLE_APP_SPECIFIC_PASSWORD" 2>&1); then
+            echo "$OUTPUT" | head -5
+            echo "::error::Notary preflight failed (see the output above). If it is HTTP 403 'agreement missing or expired': sign any pending agreement at developer.apple.com/account and in App Store Connect > Business, check the membership has not expired, then re-run this job."
+            exit 1
+          fi
+          echo "✅ Apple notary account is usable"
+
       - name: Checkout
         uses: actions/checkout@v5
 

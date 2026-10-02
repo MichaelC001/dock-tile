@@ -121,9 +121,10 @@ git tag -a v1.x.x -m "Release 1.x.x" && git push origin v1.x.x
 **Notary preflight (first step of `release.yml`, since 2026-10-03).** Apple's notary service
 answers every request with HTTP 403 "A required agreement is missing or has expired" while a
 developer agreement is unsigned or the membership has lapsed. 2.0.3 failed twice at "Notarize
-DMG" for this, 15 minutes into each run, with nothing published. The workflow now runs
+DMG" for this, 15 minutes into the first run, with nothing published. The workflow now runs
 `xcrun notarytool history` with the release credentials before the tests, so that state stops the
-run in seconds. The same probe works locally and is the thing to run BEFORE tagging and before
+run in seconds (the probe returned the same 403 from this Mac during the outage; it has not yet
+been observed to trip inside the workflow itself). The same probe works locally and is the thing to run BEFORE tagging and before
 re-running a failed release: `xcrun notarytool history --keychain-profile "DockTile-Notarization"`.
 Only the Account Holder can accept the agreement (developer.apple.com/account, then App Store
 Connect > Business); it took a few minutes to reach the notary service.
