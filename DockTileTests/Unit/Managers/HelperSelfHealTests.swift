@@ -137,9 +137,11 @@ struct HelperIconsCompleteSeamTests {
 
 /// Instance-method integration tests over a real temp bundle. `helperIconsComplete(at:)` reads
 /// `IconPipeline.isDeclarative` from the real running OS, so these exercise the actual activation
-/// point as it behaves on THIS machine (macOS 26 → declarative). This is the direct evidence that
-/// the live defect (every declarative helper misclassifying as corrupt) is fixed: a real
-/// declarative-shaped bundle built on disk now reports complete.
+/// point as it behaves on THIS machine — macOS 26+ → declarative, macOS 15 (the CI
+/// `test-macos-15` leg) → legacy — and the expectations follow the host. On a declarative host
+/// this is the direct evidence that the live defect (every declarative helper misclassifying as
+/// corrupt) is fixed; on a legacy host it is the evidence that the probe does not demand a car
+/// that no macOS 15 helper has.
 @Suite("Helper icon integrity probe (real bundle, current platform)")
 @MainActor
 struct HelperIconsCompleteTests {
@@ -159,19 +161,23 @@ struct HelperIconsCompleteTests {
         return root
     }
 
-    @Test("A real declarative-shaped bundle (Assets.car + AppIcon.icns) reports complete — the live defect is fixed")
+    /// Complete on a declarative host (the live defect is fixed); incomplete on a legacy host,
+    /// where the probe looks for the four variants this bundle lacks.
+    @Test("A real declarative-shaped bundle (Assets.car + AppIcon.icns) reports complete exactly on a declarative host")
     func declarativeShapedBundleIsComplete() throws {
         let bundle = try makeBundle(present: ["Assets.car", "AppIcon.icns"])
         defer { try? FileManager.default.removeItem(at: bundle) }
-        #expect(HelperBundleManager.shared.helperIconsComplete(at: bundle) == true)
+        #expect(HelperBundleManager.shared.helperIconsComplete(at: bundle) == IconPipeline.isDeclarative)
     }
 
-    @Test("A real LEGACY-shaped bundle (four variants, no Assets.car) reports incomplete on this (declarative) platform")
+    /// Incomplete on a declarative host (the migration trigger — it regenerates to car-shape);
+    /// complete on a legacy host, where this IS the shape every helper has.
+    @Test("A real LEGACY-shaped bundle (four variants, no Assets.car) reports incomplete exactly on a declarative host")
     func legacyShapedBundleIsIncomplete() throws {
         let bundle = try makeBundle(present: ["AppIcon.icns", "AppIcon-default.icns", "AppIcon-dark.icns",
                                                "AppIcon-clear.icns", "AppIcon-tinted.icns"])
         defer { try? FileManager.default.removeItem(at: bundle) }
-        #expect(HelperBundleManager.shared.helperIconsComplete(at: bundle) == false)
+        #expect(HelperBundleManager.shared.helperIconsComplete(at: bundle) == !IconPipeline.isDeclarative)
     }
 
     @Test("Missing Assets.car on this platform → incomplete")

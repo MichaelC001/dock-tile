@@ -252,6 +252,13 @@ jobs:
     runs-on: macos-15
 
     steps:
+      # Several suites read the SOURCE tree through `#filePath` (the string catalogs, the SF
+      # Symbol literal sweep, project.pbxproj, helper fixtures). GitHub lays every runner out at
+      # the same /Users/runner/work/<repo>/<repo> path, so a checkout here makes those compiled-in
+      # paths resolve on this host too. Without it 11 tests fail with missing files (run 36952618762).
+      - name: Checkout
+        uses: actions/checkout@v5
+
       - name: Download test products
         uses: actions/download-artifact@v5
         with:
