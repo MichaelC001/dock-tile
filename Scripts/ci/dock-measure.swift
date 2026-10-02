@@ -8,14 +8,25 @@
 //
 // Usage: swift dock-measure.swift <capture.png>                 capture the Dock, then measure
 //        swift dock-measure.swift <capture.png> --measure-only  measure an existing capture
-// Exit: 0 pass · 1 an icon is too wide · 3 inconclusive (a check that cannot measure must not pass)
+//        swift dock-measure.swift <capture.png> --count-only    capture, print ONLY the app icon count
+//        swift dock-measure.swift <capture.png> --expect-apps N fail unless exactly N app icons are found
+// Exit: 0 pass · 1 an icon is too wide · 3 inconclusive, or the app count is not N
+//       (a check that cannot measure, or did not measure the pinned tiles, must not pass)
 import AppKit
 import CoreGraphics
 
 let args = CommandLine.arguments
-guard args.count >= 2 else { print("usage: dock-measure <capture.png> [--measure-only]"); exit(2) }
+guard args.count >= 2 else { print("usage: dock-measure <capture.png> [--measure-only] [--count-only] [--expect-apps N]"); exit(2) }
 let out = args[1]
-func inconclusive(_ why: String) -> Never { print("INCONCLUSIVE: \(why)"); exit(3) }
+let countOnly = args.contains("--count-only")
+let expectApps: Int? = args.firstIndex(of: "--expect-apps").flatMap { i in i + 1 < args.count ? Int(args[i + 1]) : nil }
+
+/// Diagnostics go to stdout normally, and to stderr in `--count-only` mode so the caller can
+/// capture the bare number.
+func note(_ line: String) {
+    if countOnly { FileHandle.standardError.write((line + "\n").data(using: .utf8)!) } else { print(line) }
+}
+func inconclusive(_ why: String) -> Never { note("INCONCLUSIVE: \(why)"); exit(3) }
 
 if !args.contains("--measure-only") {
     // The Dock's main window: owned by "Dock", window layer 20, the widest one.
@@ -30,7 +41,7 @@ if !args.contains("--measure-only") {
     capture.arguments = ["-x", "-o", "-l\(windowID)", out]
     try capture.run(); capture.waitUntilExit()
     guard capture.terminationStatus == 0 else { inconclusive("screencapture exited \(capture.terminationStatus)") }
-    print("captured Dock window \(windowID)")
+    note("captured Dock window \(windowID)")
 }
 
 guard let img = NSImage(contentsOfFile: out),
@@ -52,7 +63,7 @@ for y in stride(from: 0, to: h, by: 2) {
 }
 guard maxX > minX, maxY > minY else { inconclusive("capture has no opaque bar") }
 let barHeight = maxY - minY + 1
-print("capture \(w)x\(h) px, bar x \(minX)-\(maxX) y \(minY)-\(maxY)")
+note("capture \(w)x\(h) px, bar x \(minX)-\(maxX) y \(minY)-\(maxY)")
 
 // 2. A column belongs to an icon when it differs from the bar SURFACE on any row of a band
 //    through the icons' middle. The surface is each row's most common colour: the gaps between
@@ -91,18 +102,27 @@ var apps = runs
 if let widestGap = gaps.max(), widestGap > 2 * medianGap, let split = gaps.firstIndex(of: widestGap) {
     apps = Array(runs[...split])
 }
+if countOnly { print(apps.count); exit(0) }
+
 let widths = apps.map { $0.end - $0.start + 1 }
-print("app icon widths (px), left to right: \(widths)")
-if apps.count < runs.count { print("ignored right of the separator: \(runs[apps.count...].map { $0.end - $0.start + 1 })") }
+note("app icon widths (px), left to right: \(widths)")
+if apps.count < runs.count { note("ignored right of the separator: \(runs[apps.count...].map { $0.end - $0.start + 1 })") }
+
+// 3b. The pinned tiles must be among what is scored: the caller counted the Dock before pinning
+//     and passes BEFORE + fixtures. A PASS over Apple's icons alone would prove nothing.
+if let expected = expectApps, apps.count != expected {
+    note("FAIL: expected \(expected) app icons (Dock before pinning + fixtures), found \(apps.count) — were the tiles pinned?")
+    exit(3)
+}
 
 // 4. Verdict. The median is the neighbours; a full-bleed tile would be the outlier at ~1.24×.
 let sorted = widths.sorted()
 let median = CGFloat(sorted[sorted.count / 2])
 let widest = CGFloat(sorted.last!)
 let ratio = widest / median
-print(String(format: "median %.0f px, widest %.0f px, ratio %.3f (a full-bleed tile reads ~1.24)", median, widest, ratio))
+note(String(format: "median %.0f px, widest %.0f px, ratio %.3f (a full-bleed tile reads ~1.24)", median, widest, ratio))
 if let widestRun = apps.max(by: { $0.end - $0.start < $1.end - $1.start }) {
-    print("widest icon spans x \(widestRun.start)-\(widestRun.end) (icon #\((apps.firstIndex { $0.start == widestRun.start } ?? 0) + 1) from the left)")
+    note("widest icon spans x \(widestRun.start)-\(widestRun.end) (icon #\((apps.firstIndex { $0.start == widestRun.start } ?? 0) + 1) from the left)")
 }
-if ratio > 1.10 { print("FAIL: an app icon is \(ratio)× the median width"); exit(1) }
-print("PASS: every app icon in the Dock is within 10 % of the median width")
+if ratio > 1.10 { note("FAIL: an app icon is \(ratio)× the median width"); exit(1) }
+note("PASS: every app icon in the Dock is within 10 % of the median width")

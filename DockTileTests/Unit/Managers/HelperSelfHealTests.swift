@@ -161,6 +161,16 @@ struct HelperIconsCompleteTests {
         return root
     }
 
+    /// The two shape tests below expect `IconPipeline.isDeclarative`, the same value the probe
+    /// reads — so they cannot notice that value itself regressing. This pins it from the other
+    /// direction: the switch IS the macOS 26 availability line, stated via the OS version.
+    /// Fails if the `#available` threshold is ever moved or the switch is hard-coded.
+    @Test("IconPipeline.isDeclarative is exactly 'macOS 26 or later', pinned independently of the probe")
+    func declarativeSwitchIsTheMacOS26Line() {
+        let major = ProcessInfo.processInfo.operatingSystemVersion.majorVersion
+        #expect(IconPipeline.isDeclarative == (major >= 26), "isDeclarative=\(IconPipeline.isDeclarative) on macOS \(major)")
+    }
+
     /// Complete on a declarative host (the live defect is fixed); incomplete on a legacy host,
     /// where the probe looks for the four variants this bundle lacks.
     @Test("A real declarative-shaped bundle (Assets.car + AppIcon.icns) reports complete exactly on a declarative host")

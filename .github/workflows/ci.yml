@@ -289,6 +289,18 @@ jobs:
             -only-testing:DockTileTests \
             2>&1 | tee test-macos-15.log | xcpretty --color || (cat test-macos-15.log && exit 1)
 
+      # xcpretty swallows Swift Testing's per-test lines, so a green run prints one line and a
+      # run that executed zero tests looks identical. Count the raw log and insist on the suite.
+      - name: Prove the suite ran on macOS 15
+        run: |
+          PASSED=$(grep -c "^Test case .* passed" test-macos-15.log || true)
+          FAILED=$(grep -c "^Test case .* failed" test-macos-15.log || true)
+          echo "macOS 15: $PASSED passed, $FAILED failed"
+          if [ "$PASSED" -lt 600 ]; then
+            echo "::error::Only $PASSED tests passed on macOS 15; the suite is ~680. Did the test host launch?"
+            exit 1
+          fi
+
       - name: Upload Test Log
         if: failure()
         uses: actions/upload-artifact@v5
