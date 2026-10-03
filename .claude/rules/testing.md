@@ -84,7 +84,9 @@ check went green while its measurement was INCONCLUSIVE: the measurer could not 
 icons and exited 0. A check that cannot measure must exit non-zero, and its verdict is read from
 what it measured (`measure.txt`), never from the job colour. Same family: an expectation computed
 from the thing under test (`== IconPipeline.isDeclarative`) cannot catch that thing regressing —
-keep one independent pin beside it.
+keep one independent pin beside it. And a check script's argument parsing is part of the guard:
+a missing or malformed value must be a usage error, never a silently skipped check
+(`dock-measure.swift --expect-apps abc` passed, exit 0, until it was made to exit 2).
 
 ## Coverage Targets
 
