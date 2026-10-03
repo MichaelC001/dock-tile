@@ -15,6 +15,15 @@ WORK=${1:?workdir}
 FIXTURES="$WORK/fixtures"
 [[ -n "${GITHUB_ACTIONS:-}" ]] || { echo "refusing to rewrite a non-CI Dock"; exit 2; }
 
+MEASURE="$(dirname "$0")/dock-measure.swift"
+
+# 0. How many app icons the Dock shows BEFORE pinning. The final measurement must find exactly
+#    this many plus the fixtures, or a PASS could come from Apple's icons alone while the pinning
+#    silently failed.
+BEFORE=$(swift "$MEASURE" "$WORK/dock-before.png" --count-only)
+echo "app icons before pinning: $BEFORE"
+PINNED=0
+
 # 1. One stub .app per fixture: Info.plist + a no-op executable + the baked icon. The Dock draws a
 #    pinned bundle's CFBundleIconFile without ever launching it.
 for dir in "$FIXTURES"/*/; do
@@ -43,12 +52,14 @@ PLIST
     </dict></dict>
     <key>tile-type</key><string>file-tile</string></dict>"
   echo "pinned: $app"
+  PINNED=$((PINNED + 1))
 done
 defaults write com.apple.dock autohide -bool false
 defaults write com.apple.dock magnification -bool false
 killall Dock; sleep 8
 
 # 3. A full-screen capture for human eyes (the runner has nothing private on screen), then the
-#    measurer, which captures the Dock window by ID itself and scores the icon widths.
+#    measurer, which captures the Dock window by ID itself, requires exactly BEFORE + PINNED app
+#    icons (so the tiles are provably among what it scores) and scores the icon widths.
 screencapture -x "$WORK/dock.png"
-swift "$(dirname "$0")/dock-measure.swift" "$WORK/dock-window.png" | tee "$WORK/measure.txt"
+swift "$MEASURE" "$WORK/dock-window.png" --expect-apps $((BEFORE + PINNED)) | tee "$WORK/measure.txt"
