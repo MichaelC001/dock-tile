@@ -31,7 +31,7 @@ export const softwareApplicationSchema = {
   description: siteConfig.description,
   url: siteConfig.siteUrl,
   applicationCategory: "UtilitiesApplication",
-  operatingSystem: "macOS 26.0 or later",
+  operatingSystem: "macOS 15.0 or later",
   softwareVersion: siteConfig.latestVersion,
   downloadUrl: siteConfig.downloadUrl,
   releaseNotes: `${siteConfig.siteUrl}/release-notes`,

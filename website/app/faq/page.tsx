@@ -6,7 +6,7 @@ import { FaqContent } from "./faq-content";
 
 const title = `Frequently Asked Questions - ${siteConfig.appName}`;
 const description =
-  "Answers to common Dock Tile questions — macOS 26 (Tahoe) requirements, creating and customising tiles, Ghost Mode, backups, and Grid vs List layouts.";
+  "Answers to common Dock Tile questions — macOS version requirements, creating and customising tiles, Ghost Mode, backups, and Grid vs List layouts.";
 
 export const metadata: Metadata = {
   title,

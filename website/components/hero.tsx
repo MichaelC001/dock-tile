@@ -99,7 +99,7 @@ export function Hero() {
             {m.ctaMetaOpenSource}
           </a>
           <span className="h-1 w-1 rounded-full bg-white/20" />
-          <span>macOS 26+</span>
+          <span>macOS 15+</span>
         </p>
       </div>
     </section>

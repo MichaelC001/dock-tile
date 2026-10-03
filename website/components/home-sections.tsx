@@ -495,7 +495,7 @@ export function FinalCta() {
             v{siteConfig.latestVersion}
           </Link>
           <span className="h-1 w-1 rounded-full bg-white/20" />
-          <span>macOS 26+</span>
+          <span>macOS 15+</span>
         </div>
         <p className="mt-6 text-sm text-white/50">
           {content.supportText}{" "}
