@@ -19,6 +19,16 @@ zip: `upload-artifact` drops the symlinks inside embedded frameworks), and the m
 `xcodebuild test-without-building -xctestrun …`. Keep that leg green before merging anything that
 ships to macOS 15; a Tahoe-only test must `#available`-gate itself rather than drop the leg.
 
+**The floor is one number, and four places must agree with it (`MacOSFloorGuardTests`).**
+`MACOSX_DEPLOYMENT_TARGET` in `Base.xcconfig` is the source of truth; the guard fails on any
+drift in: the appcast floor (`MIN_OS` in `generate-appcast-entry.sh`), the macOS 15 CI leg
+(required while the target is below 26, and must be DELETED once it is 26+ — the named deletion
+trigger for the frozen legacy icon path), and every requirement the website states ("Requires
+macOS N", "For macOS N+", schema.org `operatingSystem`). The site said "macOS 26 or later" for
+months while the binary and appcast said 15.0 — macOS 15 users ran a build the site disowned, on
+a path nothing tested, and the 2.0.2 oversized-tile report came from there. Raising the floor is
+therefore a single edit to `Base.xcconfig` plus whatever the guard then lists.
+
 **Dock render check (on demand):** `gh workflow run ci.yml --ref <branch> -f dock_check=true`
 adds `dock-check-macos-15`, which bakes legacy tiles with the real generator on the macOS 15
 runner (`LegacyIcnsDockFixtureTests`, enabled only by `TEST_RUNNER_DOCKTILE_ICNS_FIXTURE_DIR`),

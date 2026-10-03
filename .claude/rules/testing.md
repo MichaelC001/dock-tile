@@ -56,7 +56,8 @@ it, and unit-test the seam so a broken rule fails loudly. Existing seams: `resol
 `PopoverPreviewCanvas.naturalPanelSize` / `.naturalScale` (the `.natural` fit — the panel's intrinsic size and the scale that fits it into the fixed-width detail column),
 `ConfigurationManager.displayName(for:)` / `.commitDisplayName` (the sidebar/title-band name lags the stored one until an explicit commit — seeded on load, or the mechanism is silently inert),
 `SmartAddEngine.suggestionsForAddFlow` (filters what an opened add dialog shows; since 2026-09-02 the dialog only opens while Smart Add is on — off creates a blank tile directly),
-`ConfigurationDefaults.iconValue` (new tiles default to the `"plus"` placeholder glyph, not a category icon).
+`ConfigurationDefaults.iconValue` (new tiles default to the `"plus"` placeholder glyph, not a category icon),
+`MacOSFloorGuardTests` (the deployment target ↔ appcast floor ↔ macOS 15 CI leg ↔ website requirement claims — read from the files, so the macOS 15 leg cannot be dropped while 15 is supported, and must be once it is not).
 
 Assertion rules: prefer `#require` over `if`-guarded `#expect`; assert exact values/magnitudes,
 not `!=nil` / `.isValid` / `a>b`; never write `UserDefaults.standard` in tests — use
