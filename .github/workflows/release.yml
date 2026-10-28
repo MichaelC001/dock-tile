@@ -20,9 +20,9 @@ jobs:
   # Run tests first - release only proceeds if tests pass
   test:
     name: Run Tests
-    # Both jobs read release secrets, so both wait for the owner's approval of the `release`
-    # environment (required reviewer, v* tags only) before any step runs.
-    environment: release
+    # No `environment:` on purpose: this job reads only the repo-level Apple notary login (the
+    # preflight). The signing secrets live in the `release` environment, which only the build job
+    # uses — so a release asks for ONE approval, right before anything is signed.
     # Use macos-26 beta (Tahoe) to match local development environment
     runs-on: macos-26
 

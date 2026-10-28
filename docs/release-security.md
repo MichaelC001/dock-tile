@@ -29,7 +29,7 @@ from ever reaching users.
 |---|---|---|---|
 | Outside contributor (fork PR) | No (PR only) | No | Never: GitHub withholds secrets from fork-triggered runs |
 | Dependabot | Its own PR branches | No | No: Dependabot runs only see Dependabot secrets |
-| A write collaborator (one, kept on purpose) | Yes | No ("Release tags" ruleset) | Not the signing secrets, once their repo-level copies are deleted (see "Where the secrets live"). But code they push to `main` runs with them at the next approved release, so review `main` before approving |
+| A write collaborator (one, kept on purpose) | Yes | No ("Release tags" ruleset) | Not the signing secrets (environment-only since 2026-10-28). But code they push to `main` runs with them at the next approved release, so review `main` before approving |
 | `k97` (admin, owner) | Yes | Yes | Yes, after approving the deployment |
 
 ## The controls
@@ -37,8 +37,8 @@ from ever reaching users.
 | Control | Where | What it stops |
 |---|---|---|
 | Fork-PR runs need approval for **all** external contributors | Settings → Actions → General | A contributor's later PRs running code on our runners unapproved (the default only covers first-timers) |
-| **`release` environment**: required reviewer k97, deployment refs limited to `v*` tags | Settings → Environments | Any release job starting, or any job reading the environment's secrets, without the owner's click |
-| Signing secrets live **in the environment**, not at repo level | Settings → Environments → release | A write account pushing a branch with a new workflow that reads them. Effective only once the repo-level copies are deleted |
+| **`release` environment**: required reviewer k97, deployment refs limited to `v*` tags, used by the build job | Settings → Environments | Anything being signed or published, or any job reading the signing secrets, without the owner's approval |
+| Signing secrets live **only in the environment** (repo-level copies deleted 2026-10-28) | Settings → Environments → release | A write account pushing a branch with a new workflow that reads them |
 | **"Release tags"** ruleset: create/update/delete `v*` only by the admin role | Settings → Rules | Anyone else starting a release |
 | **"Protect main"** ruleset: no force push, no deletion | Settings → Rules | History rewrites of `main`. Normal pushes (and the pipeline's own appcast commit) still work |
 | Every action **pinned to a full commit SHA** (version as a comment) | `.github/workflows/*.yml` | A moved tag silently running new code with the signing secrets |
@@ -63,18 +63,27 @@ gh secret list --env release                                                  # 
 ## Releasing
 
 Same three steps as before ([ci-release.md](../.claude/rules/ci-release.md) "Creating a Release"),
-plus **two approvals**:
+plus **one approval**:
 
 1. Bump `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`, commit, push `main`.
-2. Tag and push `vX.Y.Z` (admin only).
-3. Open the run → **Review deployments → release → Approve**. This starts Run Tests. Approve only
-   after reading what changed on `main` since the last tag (`git log vPREV..HEAD`), especially
-   `.github/`, `Scripts/` and the Xcode project: whatever landed there runs with the signing secrets.
-4. About 15 minutes later Build, Sign & Release asks again. **Approve** a second time. A release
-   left alone after the first click waits here.
+2. Tag and push `vX.Y.Z` (admin only). Run Tests starts at once: it reads only the repo-level
+   notary login, so it needs no approval.
+3. When Run Tests passes (~15 minutes), Build, Sign & Release waits for the `release` environment.
+   Approve it only after reading what changed on `main` since the last tag (`git log
+   vPREV..HEAD`), especially `.github/`, `Scripts/` and the Xcode project: whatever landed there
+   runs with the signing secrets.
 
-Each job that uses the environment raises its own request, and the second one appears only after
-Run Tests passes, so it cannot be approved in advance.
+Approve either in the run (**Review deployments → release → Approve and deploy**) or, in a Claude
+Code session, by saying "approve" for that release: the agent then calls the API with the owner's
+`gh` login (`POST repos/k97/dock-tile/actions/runs/<run>/pending_deployments`,
+`environment_ids[]=<release env id>`, `state=approved`; the id comes from
+`gh api repos/k97/dock-tile/actions/runs/<run>/pending_deployments --jq '.[].environment.id'`). It never approves without that
+instruction for that release. The approval protects against everyone else (other accounts cannot
+approve); the owner's own login always could, so this costs only the pause, which the review in
+step 3 replaces.
+
+2.6.1 (2026-10-28) was the first release through the gate, then with two approvals (Run Tests used
+the environment too); it was trimmed to one the same day.
 
 ## Landing an outside contributor's PR
 
@@ -97,8 +106,9 @@ git push -u origin <branch> && gh workflow run ci.yml --ref <branch>
 | `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`, `APPLE_DEVELOPER_NAME`, `KEYCHAIN_PASSWORD` | repo level | Owner's choice: none of them can sign anything |
 
 While a job uses the environment, an environment secret overrides a repo-level one of the same
-name. The repo-level copies of the three signing secrets are **deleted once a release has worked
-from the environment**. Until then they are leftovers that any workflow could still read.
+name. The repo-level copies of the three signing secrets were deleted on 2026-10-28, after 2.6.1
+was signed, notarised and published from the environment copies. Keep it that way: a signing
+secret re-added at repo level is readable by any workflow on any branch.
 
 ### Moving or rotating a secret without exposing it
 

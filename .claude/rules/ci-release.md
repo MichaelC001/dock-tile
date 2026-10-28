@@ -44,12 +44,15 @@ script phases), fix on top of the contributor's commit, push the branch to origi
 `main` then fast-forwards to the branch and GitHub marks the PR merged itself, authorship intact.
 
 **Repo hardening (2026-10-28) — full reference: [docs/release-security.md](../../docs/release-security.md).**
-- **`release` environment** (required reviewer k97, `v*` tags only): both `release.yml` jobs wait for
-  your approval before any step runs — TWO approvals in sequence: one when the run starts, a second
-  when Run Tests passes (~15 min later; a release left alone after the first sits waiting).
+- **`release` environment** (required reviewer k97, `v*` tags only): the build job waits for ONE
+  approval when Run Tests passes (~15 min after the tag; Run Tests reads only the repo-level notary
+  login and starts unapproved). Review `git log vPREV..HEAD` first. **The owner may say "approve" in
+  chat**: the agent then approves via `gh api -X POST repos/k97/dock-tile/actions/runs/<run>/pending_deployments
+  -F 'environment_ids[]=<id>' -f state=approved` (id: `gh api repos/k97/dock-tile/actions/runs/<run>/pending_deployments
+  --jq '.[].environment.id'`) — never without that instruction for that release.
   The signing secrets (`SPARKLE_EDDSA_KEY`, `DEVELOPER_ID_APPLICATION_CERTIFICATE` + `_PASSWORD`) live
-  in the environment; the other five stay repo-level. Delete the three repo-level leftovers once a
-  release has worked from the environment — until then any workflow on any branch can still read them.
+  ONLY in the environment (repo-level copies deleted 2026-10-28, after 2.6.1 shipped from them); the
+  other five are repo-level. Never re-add a signing secret at repo level.
 - **Rulesets**: "Release tags" — only an admin can create, move or delete `v*` tags; "Protect main" —
   no force push, no deletion (normal pushes, including the pipeline's own commit, still work).
 - **Every action is pinned to a full commit SHA** with the version as a trailing comment; Dependabot
@@ -165,7 +168,8 @@ git add DockTile/Config/Base.xcconfig && git commit -m "chore: Bump version to 1
 # 3. Tag and push — triggers full CI pipeline (admin only: the "Release tags" ruleset)
 git tag -a v1.x.x -m "Release 1.x.x" && git push origin v1.x.x
 
-# 4. Approve the `release` environment in the run (Review deployments) — nothing runs until you do
+# 4. When Run Tests passes, approve the `release` environment (Review deployments, or say "approve"
+#    in chat) — nothing is signed or published until you do
 ```
 
 **CI handles everything else automatically:**
@@ -197,6 +201,6 @@ Connect > Business); it took a few minutes to reach the notary service.
 - [ ] Bump `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `Base.xcconfig`
 - [ ] Update version in `CLAUDE.md` header
 - [ ] Commit, push, tag, push tag
-- [ ] Approve the `release` deployment twice: when the run starts, and again when Run Tests passes
+- [ ] Approve the `release` deployment once, when Run Tests passes (after reviewing `git log vPREV..HEAD`)
 - [ ] Verify CI completes: `gh run list --limit 3`
 - [ ] Optionally edit release notes: `gh release edit v1.x.x --notes "..."`
