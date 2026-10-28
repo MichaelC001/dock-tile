@@ -1,5 +1,7 @@
 # Keeps the SHA-pinned GitHub Actions current. The cooldown waits a week after an action
 # release before proposing it, so a compromised release has time to be caught first.
+# Minor and patch bumps arrive as one grouped PR; each MAJOR bump gets its own PR, so a
+# breaking change is judged on its own (the first run bundled five majors into #34).
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -11,3 +13,4 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
