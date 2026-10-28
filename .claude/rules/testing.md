@@ -160,6 +160,11 @@ UI/integration tests run locally only.
 **Count tests per suite, not by grepping a whole log.** `grep -c "passed"` over an `xcodebuild`
 log drifted between runs of the same tree (748/750/765 for one branch), so a "+N tests" claim
 built on it cannot be checked. Report `-only-testing:` per-suite executed counts and the
-`TEST SUCCEEDED`/`FAILED` line. `DockPlistWatcherReplaceTests.survivesAtomicReplace` still flaked
-on macos-26 CI after `81507dd` (2.2.0 main push, passed on re-run) — re-run before suspecting the
-change under test.
+`TEST SUCCEEDED`/`FAILED` line. `DockPlistWatcherReplaceTests.survivesAtomicReplace` flakes on
+macos-26 CI under the full parallel suite: first after `81507dd` (2.2.0), then 6 of 10 runs on
+2026-10-28 at its 20 s deadline — with old AND new action pins alike (a same-window A/B ruled out
+the #34 bump), while 40/40 passed locally. Its deadline is now 60 s, and a failure of the second
+check states how long the FIRST event took: slow (seconds) means main-actor contention on the
+runner, fast (~0.2 s) means the watcher really went deaf. The test host's stdout reaches no CI log,
+so a `print` there is invisible — put diagnostics in the `#expect` message. Reverting the
+watcher's re-arm still fails it (at 60 s, verified that day).
