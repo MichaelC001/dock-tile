@@ -161,7 +161,7 @@ it is the Style picker in Customise (App Grid / Symbol / Emoji).
   vendored compiler's (so it is the system, not our compiler). The Custom plate pre-compensates
   (`IconDocumentBuilder.renderCompensatedStop`, pinned by `compiledCustomPlate`). **Glyph tiles do
   not**: their P3 fills render lighter in the Dock than the in-app preview, and the 3:1 promise is
-  computed on the unlightened colours. Open; changing it moves every existing tile's Dock look.
+  computed on the unlightened colours. Open as issue #33; changing it moves every existing tile's Dock look.
 - **Four renderers, one seam**: the compiled car (`IconDocumentBuilder.appsFaceIconJSON`, one grid
   layer PER APPEARANCE SLOT from `IconGenerator.generateAppsLayerPNG` on the plate's fill (the
   `system-light` / `system-dark` fills under Follow System, Dark Grey and Light; a flat gradient for Custom) — see "One grid per style" below; the dark appearance is decided as

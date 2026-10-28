@@ -383,10 +383,10 @@ struct CustomiseTileView: View {
                     cardHairline
                     inspectorRow(AppStrings.Label.appsBackgroundCustom) {
                         Spacer(minLength: 8)
-                        ColorPicker(AppStrings.Label.appsBackgroundCustom, selection: appsBackgroundColorBinding,
-                                    supportsOpacity: false)
-                            .labelsHidden()
-                            .fixedSize()
+                        // The Symbol Colour strip's custom swatch, so the two colour controls match
+                        // (owner, 2026-10-28). The row only shows for Custom, so it is always selected.
+                        CustomColorPickerButton(selectedColor: appsBackgroundColorBinding, isSelected: true, size: 20) { _ in }
+                            .accessibilityLabel(AppStrings.Label.appsBackgroundCustom)
                             .accessibilityIdentifier("appsBackgroundColor")
                     }
                 }
