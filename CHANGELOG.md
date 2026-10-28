@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-10-28
+
+### Added
+
+- **app-grid:** Choose a background for each App Grid tile — Follow System, Dark Grey, Light or a custom colour — in Customise Tile. The custom colour shows in the Dock as the colour you pick. Contributed by 3ueg ([#32](https://github.com/k97/dock-tile/pull/32), [1b16382](https://github.com/k97/dock-tile/commit/1b16382), [faf56a6](https://github.com/k97/dock-tile/commit/faf56a6), [0e34515](https://github.com/k97/dock-tile/commit/0e34515))
+
 ## [2.5.1] - 2026-10-23
 
 ### Changed
@@ -114,7 +120,8 @@ so every fix below reaches them without any action from you.
 - **customise:** Fix Customise overwriting a tile's Dock visibility with the value from when the editor was opened ([eaa93c6](https://github.com/k97/dock-tile/commit/eaa93c6))
 - **diagnostics:** Fix multi-line entries in Copy Diagnostics surviving the one-hour trim forever ([1e5a6a9](https://github.com/k97/dock-tile/commit/1e5a6a9))
 
-[Unreleased]: https://github.com/k97/dock-tile/compare/v2.5.1...HEAD
+[Unreleased]: https://github.com/k97/dock-tile/compare/v2.6.0...HEAD
+[2.6.0]: https://github.com/k97/dock-tile/compare/v2.5.1...v2.6.0
 [2.5.1]: https://github.com/k97/dock-tile/compare/v2.5.0...v2.5.1
 [2.5.0]: https://github.com/k97/dock-tile/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/k97/dock-tile/compare/v2.3.1...v2.4.0
