@@ -29,6 +29,12 @@ does not need the app in front: select sidebar rows through AX (`set selected of
 capture by `CGWindowID` with the app in the background. Bring it forward only when the owner
 says they are away from the keyboard.
 
+A dev window on another Space (2026-10-28) has no AX window (`count windows` = 0) and is missing
+from `Scripts/window-id.swift`'s on-screen list, yet `screencapture -l<id>` still captures it: find
+the id with `CGWindowListCopyWindowInfo([.optionAll], …)` filtered by PID. Switching
+`AppleLanguages` to a non-English language shows the one-time translation alert, which blocks
+`quit` (-128); with the alert unreachable, `kill -TERM` the dev instance (no pending edits) instead.
+
 ## Press NSAlert buttons by name, never by index
 
 An NSAlert with long button titles stacks its buttons vertically, and the accessibility order
@@ -55,9 +61,19 @@ window 1 to true` (selects a sidebar row — `click at {x,y}` frequently does no
 Every dev Dock tile's helper is a copy of the dev app with the same executable name (`Dock Tile
 Dev`), so `pgrep -f "/MacOS/Dock Tile Dev"` can return a helper — a process with no window. Match
 `pgrep -f "Dock Tile Dev\.app/Contents/MacOS/Dock Tile Dev( |$)"` (launch arguments follow the
-path). On 2026-10-22 a whole benchmark race drove a helper and every run came back NO SIDEBAR. A
-background `open -g` can also restore no window; `tell application id "com.docktile.dev.app" to
-reopen` creates one.
+path). On 2026-10-22 a whole benchmark race drove a helper and every run came back NO SIDEBAR —
+that, not the launch, is the likely source of an older "`open -g` restores no window" note: on
+2026-10-23 every `open -g` launch (saved state, `-ApplePersistenceIgnoreState YES`, after a
+windowless quit) presented the window (#29). Count windows by PID with `CGWindowListCopyWindowInfo`.
+
+## Hands-on evidence comes from the dev log, not the owner's eyes
+
+- **Prod and dev windows look alike.** The owner runs prod (Dock Lock on) beside dev; on 2026-10-23
+  two "done" steps landed in the prod window. Confirm each step from the dev log's `[main <pid>] [ui]`
+  lines (Release drops `ui` lines, so a click in prod leaves no trace), or quit prod first.
+- **Prove a timing race with an uncommitted experiment build**, not human speed: stretch the interval
+  (the 300 ms save debounce → 5 s), add log lines, act, read the log and the config, then
+  `git checkout` the experiment away. A human ⌘Q "instantly" is ~300 ms and proved nothing for #30.
 
 ## The test host is the dev app
 

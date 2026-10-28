@@ -97,3 +97,11 @@ language (or `AppleLanguages` on that helper's bundle ID).
 Capture windows by ID (driving-the-dev-build.md). German and Russian run ~30% long: check toggle
 labels, the title-band action button, Smart Add cards. Glossary and register rules:
 `docs/l10n/GLOSSARY.md`; reviewer guide: `docs/l10n/README.md`.
+
+- **Never `.fixedSize()` a control whose title is translated inside the 260 pt Customise inspector
+  (2026-10-28).** PR #32's Background menu did: "Systemeinstellung folgen" / "Следовать системным
+  настройкам" at full width pushed the content past the column (row label gone, column shifted —
+  the architecture.md constraint-loop risk). Use `.controlSize(.small)` and let it truncate.
+- **`l10n.py check` does not enforce the glossary beyond its protected terms.** Check every new row
+  against `GLOSSARY.md` by eye, especially rows from outside contributors: #32's zh-Hans rows used
+  分组 for "tile" (glossary 磁贴) and "Dock" for 程序坞, and passed `check`.

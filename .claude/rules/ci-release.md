@@ -36,6 +36,11 @@ therefore a single edit to `Base.xcconfig` plus whatever the guard then lists.
 local commits and first met CI on release day, where it surfaced two release blockers (a compile
 deadlock, a renderer-dependent preview test). `gh workflow run ci.yml --ref <branch>` runs any branch.
 
+**An outside contributor's PR gets no CI (2026-10-28, #32).** Fork PRs don't run `ci.yml`. Fetch with
+`git fetch origin pull/<n>/head:<branch>`, read the whole diff before building it (a build runs its
+script phases), fix on top of the contributor's commit, push the branch to origin and run CI there.
+`main` then fast-forwards to the branch and GitHub marks the PR merged itself, authorship intact.
+
 **Reading a failed run.** The macos-26 test step times out at 30 min; if xcodebuild is still running at
 15 min it `sample`s the test host and keeps `diagnostics.log` (`hang/`). On failure it uploads
 `build-logs` with `test.log` and `TestResults.xcresult`: `gh run download <run> -n build-logs`, then
