@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.6.1] - 2026-10-28
+
+No changes to the app itself.
+
+### Security
+
+- **release:** Sign every update in a protected release pipeline, and check its update signature against the key installed copies trust before it is published ([1f31912](https://github.com/k97/dock-tile/commit/1f31912), [04df39f](https://github.com/k97/dock-tile/commit/04df39f))
+
 ## [2.6.0] - 2026-10-28
 
 ### Added
@@ -120,7 +128,8 @@ so every fix below reaches them without any action from you.
 - **customise:** Fix Customise overwriting a tile's Dock visibility with the value from when the editor was opened ([eaa93c6](https://github.com/k97/dock-tile/commit/eaa93c6))
 - **diagnostics:** Fix multi-line entries in Copy Diagnostics surviving the one-hour trim forever ([1e5a6a9](https://github.com/k97/dock-tile/commit/1e5a6a9))
 
-[Unreleased]: https://github.com/k97/dock-tile/compare/v2.6.0...HEAD
+[Unreleased]: https://github.com/k97/dock-tile/compare/v2.6.1...HEAD
+[2.6.1]: https://github.com/k97/dock-tile/compare/v2.6.0...v2.6.1
 [2.6.0]: https://github.com/k97/dock-tile/compare/v2.5.1...v2.6.0
 [2.5.1]: https://github.com/k97/dock-tile/compare/v2.5.0...v2.5.1
 [2.5.0]: https://github.com/k97/dock-tile/compare/v2.4.0...v2.5.0
