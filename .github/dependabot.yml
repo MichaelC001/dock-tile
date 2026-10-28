@@ -1,0 +1,13 @@
+# Keeps the SHA-pinned GitHub Actions current. The cooldown waits a week after an action
+# release before proposing it, so a compromised release has time to be caught first.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]

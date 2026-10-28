@@ -36,10 +36,25 @@ therefore a single edit to `Base.xcconfig` plus whatever the guard then lists.
 local commits and first met CI on release day, where it surfaced two release blockers (a compile
 deadlock, a renderer-dependent preview test). `gh workflow run ci.yml --ref <branch>` runs any branch.
 
-**An outside contributor's PR gets no CI (2026-10-28, #32).** Fork PRs don't run `ci.yml`. Fetch with
+**An outside contributor's PR: never approve its workflow run or its Vercel preview (2026-10-28, #32).**
+Fork-PR runs wait for approval (policy: all external contributors), and Vercel's Git Fork Protection
+holds a fork preview behind "Authorize" — both are the gate, leave them unapproved. Instead fetch with
 `git fetch origin pull/<n>/head:<branch>`, read the whole diff before building it (a build runs its
 script phases), fix on top of the contributor's commit, push the branch to origin and run CI there.
 `main` then fast-forwards to the branch and GitHub marks the PR merged itself, authorship intact.
+
+**Repo hardening (2026-10-28):**
+- **`release` environment** (required reviewer k97, `v*` tags only): both `release.yml` jobs wait for
+  your approval before any step runs — TWO approvals in sequence: one when the run starts, a second
+  when Run Tests passes (~15 min later; a release left alone after the first sits waiting).
+  **To do (owner):** move the 8 release secrets into the environment (`gh secret set <NAME> --env
+  release`), check a release, then delete the repo-level copies — until then any workflow on any ref
+  can still read them and the gate protects only the release path.
+- **Rulesets**: "Release tags" — only an admin can create, move or delete `v*` tags; "Protect main" —
+  no force push, no deletion (normal pushes, including the pipeline's own commit, still work).
+- **Every action is pinned to a full commit SHA** with the version as a trailing comment; Dependabot
+  (`.github/dependabot.yml`, 7-day cooldown) proposes bumps. A new `uses:` must be pinned the same way —
+  the repo's Actions policy requires it.
 
 **Reading a failed run.** The macos-26 test step times out at 30 min; if xcodebuild is still running at
 15 min it `sample`s the test host and keeps `diagnostics.log` (`hang/`). On failure it uploads
@@ -142,8 +157,10 @@ it), and the GitHub secret cannot be read back. Move it with `generate_keys -x f
 # 2. Commit and push
 git add DockTile/Config/Base.xcconfig && git commit -m "chore: Bump version to 1.x.x" && git push
 
-# 3. Tag and push — triggers full CI pipeline
+# 3. Tag and push — triggers full CI pipeline (admin only: the "Release tags" ruleset)
 git tag -a v1.x.x -m "Release 1.x.x" && git push origin v1.x.x
+
+# 4. Approve the `release` environment in the run (Review deployments) — nothing runs until you do
 ```
 
 **CI handles everything else automatically:**
@@ -175,5 +192,6 @@ Connect > Business); it took a few minutes to reach the notary service.
 - [ ] Bump `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `Base.xcconfig`
 - [ ] Update version in `CLAUDE.md` header
 - [ ] Commit, push, tag, push tag
+- [ ] Approve the `release` deployment twice: when the run starts, and again when Run Tests passes
 - [ ] Verify CI completes: `gh run list --limit 3`
 - [ ] Optionally edit release notes: `gh release edit v1.x.x --notes "..."`
