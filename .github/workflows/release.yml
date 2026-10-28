@@ -399,6 +399,9 @@ jobs:
           echo "Downloading Sparkle ${SPARKLE_VERSION} tools..."
           curl -sL -o /tmp/sparkle.tar.xz "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz"
           ls -la /tmp/sparkle.tar.xz
+          # Its sign_update receives SPARKLE_EDDSA_KEY, so run only the exact tarball we vetted
+          # (GitHub's recorded asset digest for 2.9.0). Bumping SPARKLE_VERSION needs a new digest.
+          echo "01e0f0ebf6614061ea816d414de50f937d64ffa6822ad572243031ca3676fe19  /tmp/sparkle.tar.xz" | shasum -a 256 -c -
           mkdir -p /tmp/sparkle
           tar -xf /tmp/sparkle.tar.xz -C /tmp/sparkle
           ls /tmp/sparkle/bin/
@@ -412,6 +415,15 @@ jobs:
           echo "SPARKLE_SIGNATURE=${SIGNATURE}" >> $GITHUB_OUTPUT
           echo "DMG_SIZE=${DMG_SIZE}" >> $GITHUB_OUTPUT
           echo "Sparkle EdDSA signature generated (${DMG_SIZE} bytes)"
+
+      # sign_update signs with whatever key it is given; a wrong SPARKLE_EDDSA_KEY would publish an
+      # update every installed copy rejects. Stop here unless the signature verifies against the
+      # SUPublicEDKey those copies trust.
+      - name: Verify Sparkle signature against the app's public key
+        run: |
+          DMG_NAME="${APP_NAME_NO_SPACE}-${{ steps.version.outputs.VERSION }}.dmg"
+          swift Scripts/ci/verify-sparkle-signature.swift "./$DMG_NAME" \
+            "${{ steps.sparkle.outputs.SPARKLE_SIGNATURE }}" DockTile/Resources/Info.plist
 
       - name: Update appcast
         run: |

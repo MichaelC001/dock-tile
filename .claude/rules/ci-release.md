@@ -43,18 +43,23 @@ holds a fork preview behind "Authorize" — both are the gate, leave them unappr
 script phases), fix on top of the contributor's commit, push the branch to origin and run CI there.
 `main` then fast-forwards to the branch and GitHub marks the PR merged itself, authorship intact.
 
-**Repo hardening (2026-10-28):**
+**Repo hardening (2026-10-28) — full reference: [docs/release-security.md](../../docs/release-security.md).**
 - **`release` environment** (required reviewer k97, `v*` tags only): both `release.yml` jobs wait for
   your approval before any step runs — TWO approvals in sequence: one when the run starts, a second
   when Run Tests passes (~15 min later; a release left alone after the first sits waiting).
-  **To do (owner):** move the 8 release secrets into the environment (`gh secret set <NAME> --env
-  release`), check a release, then delete the repo-level copies — until then any workflow on any ref
-  can still read them and the gate protects only the release path.
+  The signing secrets (`SPARKLE_EDDSA_KEY`, `DEVELOPER_ID_APPLICATION_CERTIFICATE` + `_PASSWORD`) live
+  in the environment; the other five stay repo-level. Delete the three repo-level leftovers once a
+  release has worked from the environment — until then any workflow on any branch can still read them.
 - **Rulesets**: "Release tags" — only an admin can create, move or delete `v*` tags; "Protect main" —
   no force push, no deletion (normal pushes, including the pipeline's own commit, still work).
 - **Every action is pinned to a full commit SHA** with the version as a trailing comment; Dependabot
-  (`.github/dependabot.yml`, 7-day cooldown) proposes bumps. A new `uses:` must be pinned the same way —
-  the repo's Actions policy requires it.
+  (`.github/dependabot.yml`, 7-day cooldown, each major its own PR) proposes bumps. A new `uses:` must
+  be pinned the same way — the repo's Actions policy requires it.
+- **Sparkle signature guard**: `Scripts/ci/verify-sparkle-signature.swift` checks the build's
+  `SUPublicEDKey` against a pinned copy, then the signature against it, before the appcast, website
+  commit or GitHub Release — a wrong key fails the run and publishes nothing. The Sparkle tools
+  tarball that receives the key is checked against a pinned SHA-256; bumping `SPARKLE_VERSION`
+  needs the new release's digest (`gh api repos/sparkle-project/Sparkle/releases/tags/<v>`).
 
 **Reading a failed run.** The macos-26 test step times out at 30 min; if xcodebuild is still running at
 15 min it `sample`s the test host and keeps `diagnostics.log` (`hang/`). On failure it uploads
