@@ -167,7 +167,8 @@ struct AppsFaceRenderTests {
     }
 
     static func bake(_ style: IconStyle, minis: [IconGenerator.AppsFaceMini]) throws -> NSBitmapImageRep {
-        let image = IconGenerator.appsIcon(minis: minis, size: CGSize(width: canvas, height: canvas), iconStyle: style)
+        let image = IconGenerator.appsIcon(minis: minis, size: CGSize(width: canvas, height: canvas), iconStyle: style,
+                                            background: .automatic, customHex: ConfigurationDefaults.appsBackgroundColor)
         return try #require(image.representations.compactMap { $0 as? NSBitmapImageRep }.first)
     }
 
@@ -214,7 +215,8 @@ struct AppsFaceRenderTests {
         let out = FileManager.default.temporaryDirectory.appendingPathComponent("docktile-apps-\(UUID().uuidString).icns")
         defer { try? FileManager.default.removeItem(at: out) }
         try IconGenerator.generateAppsFallbackIcns(
-            minis: [.init(image: Self.mini(.systemBlue), isFolder: false)], outputURL: out)
+            minis: [.init(image: Self.mini(.systemBlue), isFolder: false)], outputURL: out,
+            background: .automatic, customHex: ConfigurationDefaults.appsBackgroundColor)
         let image = try #require(NSImage(contentsOf: out))
         let rep = try #require(image.representations.compactMap { $0 as? NSBitmapImageRep }.max(by: { $0.pixelsWide < $1.pixelsWide }))
         #expect(rep.pixelsWide == 1024)
@@ -227,7 +229,8 @@ struct AppsFaceRenderTests {
         let out = FileManager.default.temporaryDirectory.appendingPathComponent("docktile-apps-dark-\(UUID().uuidString).icns")
         defer { try? FileManager.default.removeItem(at: out) }
         try IconGenerator.generateAppsIcns(minis: [.init(image: Self.mini(.systemBlue), isFolder: false)],
-                                           outputURL: out, iconStyle: .dark)
+                                           outputURL: out, iconStyle: .dark,
+                                           background: .automatic, customHex: ConfigurationDefaults.appsBackgroundColor)
         let image = try #require(NSImage(contentsOf: out))
         let rep = try #require(image.representations.compactMap { $0 as? NSBitmapImageRep }.max(by: { $0.pixelsWide < $1.pixelsWide }))
         #expect(abs(try Self.gray(rep, 512, 106) - 0.192) < 0.02)

@@ -123,7 +123,7 @@ Every role (fill top/bottom, glyph) per background x style x icon type is derive
 
 ## Apps tile face (`iconFace`, v10)
 
-A tile can show its OWN apps as a folder-style mini grid on system glass instead of a glyph. Choosing
+A tile can show its OWN apps as a folder-style mini grid on system glass (or its own plate, v12) instead of a glyph. Choosing
 it is the Style picker in Customise (App Grid / Symbol / Emoji).
 
 - **Model**: `DockTileConfiguration.iconFace` (`IconFace`: `.glyph` / `.apps`), a separate field, not an
@@ -139,18 +139,38 @@ it is the Style picker in Customise (App Grid / Symbol / Emoji).
   the shape (cells 0.3825 / 0.243; was 0.70 / 0.047 until 2026-10-19, when the 3x3 read small and
   crowded to the centre in the Dock). App icons carry the icon-grid margin, so their draw box is the cell divided by 0.805
   (`appIconContentRatio`); folders are fitted to the cell. Contact shadow 0.35 black, offset 6 and blur
-  12 at 1024, gated by `minDetailSize`. Material = system grays, top then bottom: light 1.0 -> 0.925,
-  dark 0.192 -> 0.078. Clear and Tinted desaturate the minis. `TilePalette` is NOT consulted (the face
-  ignores the tile colour).
+  12 at 1024, gated by `minDetailSize`. Material = the plate (`AppsFaceGrid.fillColors`, below); under
+  Follow System the system grays, top then bottom: light 1.0 -> 0.925, dark 0.192 -> 0.078. Clear and
+  Tinted desaturate the minis. `TilePalette` is NOT consulted (the face ignores the Symbol/Emoji tint).
+- **Plate = per-tile App Grid background (v12, PR #32 by 3ueg)**: `appsBackground` (`AppsGridBackground`:
+  Follow System / Dark Grey / Light / Custom; unknown values and missing keys decode to Follow System) +
+  `appsBackgroundColor` (sRGB hex, kept while another plate is picked). **Follow System must bake
+  byte-for-byte what tiles baked before v12 (critical)**: its `iconSignature` string is unchanged (so no
+  helper reads stale), and the empty-slot tone per compiled layer comes from the pure seam
+  `AppsFaceGrid.layerOnDarkGlass(slot:background:customHex:)` — the tinted slot is ALWAYS dark glass
+  (it holds the Clear Dark renders and the system remaps its fill). The PR first mapped that slot to
+  the light grays, which would have flipped every empty Follow System grid under Clear/Tinted on the
+  next migration with no Update prompt; `AppsBackgroundTests.layerTones` pins all 3 slots × 4 plates.
+  A fixed plate is the same in every slot while the minis still follow the system style (Dark-style
+  minis on a Light plate under Dark). `usesDarkPlate` = white contrasts better than black (relative
+  luminance ~0.179). The renderers take the plate with NO default parameter, so a new bake path that
+  forgets it is a compile error.
+- **macOS renders an `.icon` fill lighter than its stops (measured 2026-10-28)**: IconServices draws a
+  fill's stop components as if they were Generic RGB (gamma 1.8) — `srgb:` #224466 renders #2B5678,
+  the `display-p3:` equivalent the same, and Apple's `actool` output renders identically to the
+  vendored compiler's (so it is the system, not our compiler). The Custom plate pre-compensates
+  (`IconDocumentBuilder.renderCompensatedStop`, pinned by `compiledCustomPlate`). **Glyph tiles do
+  not**: their P3 fills render lighter in the Dock than the in-app preview, and the 3:1 promise is
+  computed on the unlightened colours. Open; changing it moves every existing tile's Dock look.
 - **Four renderers, one seam**: the compiled car (`IconDocumentBuilder.appsFaceIconJSON`, one grid
-  layer PER APPEARANCE SLOT from `IconGenerator.generateAppsLayerPNG` on the `system-light` /
-  `system-dark` fills — see "One grid per style" below; the dark appearance is decided as
+  layer PER APPEARANCE SLOT from `IconGenerator.generateAppsLayerPNG` on the plate's fill (the
+  `system-light` / `system-dark` fills under Follow System, Dark Grey and Light; a flat gradient for Custom) — see "One grid per style" below; the dark appearance is decided as
   `system-dark`, tinted reuses `system-light`; each grid spans
   the WHOLE 1024 canvas — in an `.icon` the canvas is the tile and the system adds the icon-grid
   margin itself, so insetting the layer too shrank every mini by 0.805 in the Dock, found against
   TinyFolder 2026-10-19, pinned by `AppsFaceRenderTests`); the fallback `.icns`
   (`generateAppsFallbackIcns`) and the macOS 15 four-variant bake (`generateAppsIcns`), both on the
-  inset squircle with the system grays; and the live preview (`DockTileIconPreview.appsFaceBody`, full
+  inset squircle with the plate; and the live preview (`DockTileIconPreview.appsFaceBody`, full
   frame, minis from `TileIconRasterCache`). Proven document shape (fixture):
   `docs/icon-spike-fixtures/appgrid-systemfill.icon`.
 - **Explicit flat keys (critical)**: the `.icon` writes `specular` off, `translucency` off, `shadow`

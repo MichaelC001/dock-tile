@@ -87,11 +87,11 @@ Keep `%@`-style placeholders exactly as they are. `\n` means a line break, `\|` 
 | `label.apps.note.one` | Shows the only app in this tile. | 显示此磁贴中唯一的App。 | machine | Customise Tile: Apps caption, one app |
 | `label.apps.shown` | Shown | 显示 | machine | Customise Tile: Apps card row — how many apps the face shows |
 | `label.apps.shownValue` | %1$lld of %2$lld | %2$lld 个中的 %1$lld 个 | machine | Customise Tile: Apps card Shown value, e.g. 9 of 12; %1$lld = shown, %2$lld = total (positional so a language may reorder them) |
-| `label.appsBackground` | Dock Icon Background | Dock 图标背景 | reviewed | App Grid inspector section for per-tile plate settings |
+| `label.appsBackground` | Dock Icon Background | 程序坞图标背景 | machine | App Grid inspector section for per-tile plate settings |
 | `label.appsBackground.automatic` | Follow System | 跟随系统 | reviewed | App Grid background follows the macOS icon appearance |
 | `label.appsBackground.charcoal` | Dark Grey | 深灰色 | reviewed | Fixed dark background for an App Grid icon |
 | `label.appsBackground.custom` | Custom Colour | 自定义颜色 | reviewed | Native colour picker for an App Grid icon background |
-| `label.appsBackground.hint` | For this tile only. Preview your colour, then click Update to apply it to the Dock. | 仅影响当前分组。预览颜色后，点击“更新”应用到 Dock。 | reviewed | Explains how per-tile App Grid background edits reach the Dock |
+| `label.appsBackground.hint` | Applies to this tile only. | 仅应用于此磁贴。 | machine | Caption under the App Grid background menu: the choice affects only this tile |
 | `label.appsBackground.light` | Light | 浅色 | reviewed | Fixed light background for an App Grid icon |
 | `label.appsFace.accessibility` | Apps face: showing %lld of this tile's apps | App视图：显示此磁贴中的 %lld 个App | machine | VoiceOver label for a tile preview showing the Apps face; %lld = number of app icons shown |
 | `label.background` | Background | 背景 | machine | Customise Tile: background row label |

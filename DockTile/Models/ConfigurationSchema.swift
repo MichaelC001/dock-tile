@@ -55,11 +55,11 @@ enum ConfigurationDefaults {
     // v10: Tile face — App Grid for NEW tiles; the decoder keeps an existing tile's glyph
     static let iconFace: IconFace = .apps
 
-    // Preserve the system appearance unless a tile explicitly chooses its own plate.
+    // v11: savedSymbol / savedEmoji — nil (nothing saved) for new and pre-v11 tiles
+
+    // v12: App Grid plate — follow the system unless a tile picks its own
     static let appsBackground: AppsGridBackground = .automatic
     static let appsBackgroundColor = "#404040"
-
-    // v11: savedSymbol / savedEmoji — nil (nothing saved) for new and pre-v11 tiles
 
     // Visibility
     static let isVisibleInDock = true  // Show in Dock by default

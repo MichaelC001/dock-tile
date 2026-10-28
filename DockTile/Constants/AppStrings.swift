@@ -420,8 +420,8 @@ enum AppStrings {
         )
         static let appsBackgroundHint = NSLocalizedString(
             "label.appsBackground.hint",
-            value: "For this tile only. Preview your colour, then click Update to apply it to the Dock.",
-            comment: "Explains how per-tile App Grid background edits reach the Dock"
+            value: "Applies to this tile only.",
+            comment: "Caption under the App Grid background menu: the choice affects only this tile"
         )
         static let appsHeader = NSLocalizedString(
             "label.apps.header",

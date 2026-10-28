@@ -91,7 +91,7 @@ Keep `%@`-style placeholders exactly as they are. `\n` means a line break, `\|` 
 | `label.appsBackground.automatic` | Follow System | Suivre le système | machine | App Grid background follows the macOS icon appearance |
 | `label.appsBackground.charcoal` | Dark Grey | Gris foncé | machine | Fixed dark background for an App Grid icon |
 | `label.appsBackground.custom` | Custom Colour | Couleur personnalisée | machine | Native colour picker for an App Grid icon background |
-| `label.appsBackground.hint` | For this tile only. Preview your colour, then click Update to apply it to the Dock. | Pour cette tuile uniquement. Prévisualisez la couleur puis cliquez sur « Mettre à jour » pour l’appliquer dans le Dock. | machine | Explains how per-tile App Grid background edits reach the Dock |
+| `label.appsBackground.hint` | Applies to this tile only. | S’applique uniquement à cette tuile. | machine | Caption under the App Grid background menu: the choice affects only this tile |
 | `label.appsBackground.light` | Light | Clair | machine | Fixed light background for an App Grid icon |
 | `label.appsFace.accessibility` | Apps face: showing %lld of this tile's apps | Vue des apps : affiche %lld apps de cette tuile | machine | VoiceOver label for a tile preview showing the Apps face; %lld = number of app icons shown |
 | `label.background` | Background | Arrière-plan | machine | Customise Tile: background row label |

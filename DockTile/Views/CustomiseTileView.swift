@@ -373,7 +373,10 @@ struct CustomiseTileView: View {
                     }
                     .labelsHidden()
                     .pickerStyle(.menu)
-                    .fixedSize()
+                    .controlSize(.small)   // compact pop-up, like Icon Weight
+                    // No .fixedSize(): "Следовать системным настройкам" / "Systemeinstellung folgen"
+                    // at full width pushed the content past the 260 pt column (the label vanished
+                    // and the column shifted) — it truncates in the menu instead.
                     .accessibilityIdentifier("appsBackgroundMode")
                 }
                 if editedConfig.appsBackground == .custom {

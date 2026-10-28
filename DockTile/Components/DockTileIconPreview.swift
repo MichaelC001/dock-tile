@@ -214,10 +214,11 @@ struct DockTileIconPreview: View {
         }
     }
 
-    /// The Apps face: a charcoal background for Default/Dark, and light glass for Clear/Tinted.
-    /// Uses `IconStyle.forDisplay`, never raw `colorScheme`. The full frame is the shape
+    /// The Apps face: the app grid on the tile's plate (`AppsFaceGrid.fillColors` — under Follow
+    /// System the system glass grays, light except under Dark). Light/Dark keys on `iconStyle`
+    /// (`IconStyle.forDisplay`, like Mono), never raw `colorScheme`. The full frame is the shape
     /// (UI slots apply no icon-grid inset). Minis are `TileIconRasterCache` bitmaps, never the
-    /// IconServices `NSImage`. The gray pairs match the declarative document fills.
+    /// IconServices `NSImage`. The plate colours match the declarative document fills.
     private func appsFaceBody(_ minis: [AppItem]) -> some View {
         let colors = AppsFaceGrid.fillColors(background: appsBackground, customHex: appsBackgroundColor, style: iconStyle)
         let desaturate = AppsFaceGrid.desaturatesMinis(style: iconStyle)

@@ -9,7 +9,7 @@
 //
 
 import Foundation
-import AppKit
+import AppKit  // only NSColorSpace.genericRGB: CoreGraphics' kCGColorSpaceGenericRGB is unavailable in Swift
 
 /// THE one availability branch for the declarative icon pipeline. Consulted at exactly three
 /// activation points: helper bundle generation, `IconStyleManager` activation, and
@@ -108,24 +108,15 @@ enum IconDocumentBuilder {
     ///
     /// The three-way hiding is built here, not through `LayerSpec.Exclusive`: that two-case model
     /// shows a glyph's light layer in the tinted slot ON PURPOSE, and glyph documents must not change.
-    nonisolated static func appsFaceIconJSON(
-        background: AppsGridBackground = ConfigurationDefaults.appsBackground,
-        customHex: String = ConfigurationDefaults.appsBackgroundColor
-    ) -> [String: Any] {
-        func fill(_ style: IconStyle) -> Any {
+    nonisolated static func appsFaceIconJSON(background: AppsGridBackground, customHex: String) throws -> [String: Any] {
+        func fill(_ style: IconStyle) throws -> Any {
             switch background {
             case .automatic: return style == .dark ? systemDarkFill : systemLightFill
             case .charcoal: return systemDarkFill
             case .light: return systemLightFill
             case .custom:
-                let rgb = AppsFaceGrid.fillColors(background: background, customHex: customHex, style: style).top
-                // The vendored compiler renders root gradients in Generic RGB even when
-                // their stops say sRGB. Convert to its working space so IconServices returns
-                // the user's chosen sRGB colour; the compiled-icon pixel test guards this.
-                let color = NSColor(srgbRed: rgb.r, green: rgb.g, blue: rgb.b, alpha: 1)
-                    .usingColorSpace(.genericRGB)!
-                let stop = String(format: "srgb:%.5f,%.5f,%.5f,1.00000",
-                                  color.redComponent, color.greenComponent, color.blueComponent)
+                let stop = try renderCompensatedStop(
+                    AppsFaceGrid.fillColors(background: background, customHex: customHex, style: style).top)
                 return ["linear-gradient": [stop, stop],
                         "orientation": ["start": ["x": 0.5, "y": 0], "stop": ["x": 0.5, "y": 1]]]
             }
@@ -152,15 +143,27 @@ enum IconDocumentBuilder {
             "layers": layers
         ]
         return [
-            "fill": fill(.defaultStyle),
+            "fill": try fill(.defaultStyle),
             "fill-specializations": [
-                ["value": fill(.defaultStyle)],
-                ["appearance": IconAppearance.dark.rawValue, "value": fill(.dark)],
-                ["appearance": IconAppearance.tinted.rawValue, "value": fill(.tinted)]
+                ["value": try fill(.defaultStyle)],
+                ["appearance": IconAppearance.dark.rawValue, "value": try fill(.dark)],
+                ["appearance": IconAppearance.tinted.rawValue, "value": try fill(.tinted)]
             ],
             "groups": [group],
             "supported-platforms": ["circles": [], "squares": ["macOS"]]
         ]
+    }
+
+    /// An sRGB stop that macOS renders as `colour`. IconServices draws an `.icon` fill's stop
+    /// components as if they were Generic RGB (gamma 1.8), so `srgb:` #224466 comes back #2B5678.
+    /// Measured 2026-10-28 with the SAME result from Apple's `actool` and the vendored compiler:
+    /// system behaviour, not a compiler bug. Writing the Generic RGB components makes the Dock show
+    /// the colour picked; `AppsBackgroundTests.compiledCustomPlate` pins it end to end. Throws
+    /// rather than writing an unconverted stop (a silently wrong colour), like `p3Components`.
+    private static func renderCompensatedStop(_ colour: SRGB) throws -> String {
+        guard let c = NSColor(srgbRed: colour.r, green: colour.g, blue: colour.b, alpha: 1)
+            .usingColorSpace(.genericRGB) else { throw IconGeneratorError.colorConversionFailed }
+        return String(format: "srgb:%.5f,%.5f,%.5f,1.00000", c.redComponent, c.greenComponent, c.blueComponent)
     }
 
     /// Writes `icon.json` + `Assets/<imageName>.png` into a new `<name>.icon` directory under

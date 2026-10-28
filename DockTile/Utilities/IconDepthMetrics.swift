@@ -309,7 +309,8 @@ enum IconDepthMetrics {
 /// widened 2026-10-19 because the 3×3 minis read small and crowded to the centre in the Dock.
 /// One to four items draw in a 2x2 grid (one item sits in the top-left cell, like an iOS folder —
 /// owner, 2026-10-22; it was one centred 0.60 icon until then), five or more in a 3x3. `TilePalette`
-/// is deliberately not involved: the face uses system grays, not the tile's tint. Only Foundation/CoreGraphics, so it is unit-testable.
+/// is deliberately not involved: the face's plate is the system grays or the tile's own App Grid
+/// background (`fillColors`), never the Symbol/Emoji tint. Only Foundation/CoreGraphics, so it is unit-testable.
 enum AppsFaceGrid {
     /// Side of the mini-icon block, as a fraction of the shape.
     static let blockRatio: CGFloat = 0.80
@@ -369,7 +370,7 @@ enum AppsFaceGrid {
                                             blur: nominalSize * 12 / 1024)
     }
 
-    // MARK: Material (system grays, top then bottom)
+    // MARK: Material (system grays or the tile's App Grid background, top then bottom)
 
     static let lightGrays: (top: CGFloat, bottom: CGFloat) = (1.0, 0.925)
     static let darkGrays: (top: CGFloat, bottom: CGFloat) = (0.192, 0.078)
@@ -380,19 +381,34 @@ enum AppsFaceGrid {
 
     static func fillColors(background: AppsGridBackground, customHex: String, style: IconStyle)
         -> (top: SRGB, bottom: SRGB) {
-        if background == .custom {
+        let grays: (top: CGFloat, bottom: CGFloat)
+        switch background {
+        case .custom:
             let color = SRGB(hex: customHex) ?? SRGB(hex: ConfigurationDefaults.appsBackgroundColor)!
             return (color, color)
+        case .charcoal: grays = darkGrays
+        case .light: grays = lightGrays
+        case .automatic: grays = fillGrays(style: style)
         }
-        let grays = background == .charcoal ? darkGrays
-            : background == .light ? lightGrays : fillGrays(style: style)
         return (SRGB(r: Double(grays.top), g: Double(grays.top), b: Double(grays.top)),
                 SRGB(r: Double(grays.bottom), g: Double(grays.bottom), b: Double(grays.bottom)))
     }
 
+    /// Dark when white reads better on the plate's top than black (equal contrast at relative
+    /// luminance ~0.179).
     static func usesDarkPlate(background: AppsGridBackground, customHex: String, style: IconStyle) -> Bool {
-        let c = fillColors(background: background, customHex: customHex, style: style).top
-        return c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722 < 0.5
+        let top = fillColors(background: background, customHex: customHex, style: style).top
+        return ToneMap.contrastRatio(top, SRGB(r: 1, g: 1, b: 1)) > ToneMap.contrastRatio(top, SRGB(r: 0, g: 0, b: 0))
+    }
+
+    /// The empty-slot tone baked into one compiled appearance layer. The tinted slot holds the
+    /// Clear Dark renders and the system remaps its fill, so it is always dark glass — the tone
+    /// it had before backgrounds existed. Follow System keeps that slot-by-slot bake exactly;
+    /// a fixed plate looks the same in every slot, so its own colour decides.
+    static func layerOnDarkGlass(slot: AppIconRenderStyle, background: AppsGridBackground, customHex: String) -> Bool {
+        if slot == .clearDark { return true }
+        if background == .automatic { return slot == .dark }
+        return usesDarkPlate(background: background, customHex: customHex, style: .defaultStyle)
     }
 
     /// An App Grid with no (installed) apps shows the empty 2x2: four quiet slots in the 2x2 cells,

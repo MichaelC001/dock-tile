@@ -316,7 +316,7 @@ struct IconCompilerTests {
                 minis: (0..<5).map { _ in .init(image: mini, isFolder: false) })
         }
         let document = try IconDocumentBuilder.writeDocument(
-            json: IconDocumentBuilder.appsFaceIconJSON(), layerPNGs: pngs, name: "AppIcon", parent: scratch)
+            json: IconDocumentBuilder.appsFaceIconJSON(background: .automatic, customHex: ConfigurationDefaults.appsBackgroundColor), layerPNGs: pngs, name: "AppIcon", parent: scratch)
         let car = try IconCompiler.compile(
             document: document, outputDir: scratch.appendingPathComponent("out"),
             compilerURL: URL(fileURLWithPath: Self.builtCompilerPath))

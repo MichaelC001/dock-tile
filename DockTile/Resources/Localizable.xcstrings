@@ -4369,8 +4369,8 @@
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "translated",
-            "value": "Dock 图标背景"
+            "state": "needs_review",
+            "value": "程序坞图标背景"
           }
         }
       }
@@ -4538,55 +4538,55 @@
       }
     },
     "label.appsBackground.hint": {
-      "comment": "Explains how per-tile App Grid background edits reach the Dock",
+      "comment": "Caption under the App Grid background menu: the choice affects only this tile",
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Nur für diese Kachel. Sieh dir die Farbe in der Vorschau an und klicke dann auf „Aktualisieren“, um sie im Dock anzuwenden."
+            "value": "Gilt nur für diese Kachel."
           }
         },
         "en-GB": {
           "stringUnit": {
             "state": "translated",
-            "value": "For this tile only. Preview your colour, then click Update to apply it to the Dock."
+            "value": "Applies to this tile only."
           }
         },
         "en-AU": {
           "stringUnit": {
             "state": "translated",
-            "value": "For this tile only. Preview your colour, then click Update to apply it to the Dock."
+            "value": "Applies to this tile only."
           }
         },
         "en-US": {
           "stringUnit": {
             "state": "translated",
-            "value": "For this tile only. Preview your color, then click Update to apply it to the Dock."
+            "value": "Applies to this tile only."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Pour cette tuile uniquement. Prévisualisez la couleur puis cliquez sur « Mettre à jour » pour l’appliquer dans le Dock."
+            "value": "S’applique uniquement à cette tuile."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "このタイルにのみ適用されます。色をプレビューしてから「更新」をクリックするとDockに反映されます。"
+            "value": "このタイルにのみ適用されます。"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Только для этой плитки. Выберите цвет и нажмите «Обновить», чтобы применить его в Dock."
+            "value": "Применяется только к этой плитке."
           }
         },
         "zh-Hans": {
           "stringUnit": {
-            "state": "translated",
-            "value": "仅影响当前分组。预览颜色后，点击“更新”应用到 Dock。"
+            "state": "needs_review",
+            "value": "仅应用于此磁贴。"
           }
         }
       }

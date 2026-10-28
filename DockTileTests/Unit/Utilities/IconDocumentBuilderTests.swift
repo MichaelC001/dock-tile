@@ -122,7 +122,7 @@ struct IconDocumentBuilderTests {
 
     @Test("Apps face: system fills, one grid per appearance slot, and the flat look written explicitly")
     func appsFaceDocument() throws {
-        let json = IconDocumentBuilder.appsFaceIconJSON()
+        let json = try IconDocumentBuilder.appsFaceIconJSON(background: .automatic, customHex: ConfigurationDefaults.appsBackgroundColor)
         #expect(json["fill"] as? String == "system-light")
         let specs = try #require(json["fill-specializations"] as? [[String: Any]])
         #expect(specs.count == 3)

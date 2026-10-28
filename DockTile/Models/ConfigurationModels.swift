@@ -24,8 +24,8 @@ struct DockTileConfiguration: Identifiable, Codable, Hashable {
     var iconWeight: IconWeight  // v7: SF Symbol stroke weight (ignored for emojis)
     var background: TileBackground  // v9: Colour fill or Mono (white/near-black)
     var iconFace: IconFace  // v10: glyph (symbol/emoji) or the Apps grid
-    var appsBackground: AppsGridBackground
-    var appsBackgroundColor: String
+    var appsBackground: AppsGridBackground  // v12: App Grid plate (Follow System, Dark Grey, Light, Custom)
+    var appsBackgroundColor: String  // v12: the Custom plate's sRGB hex; kept while another plate is picked
     var savedSymbol: SavedGlyph?  // v11: last symbol + size, restored when the Symbol style is picked again
     var savedEmoji: SavedGlyph?  // v11: last emoji + size, restored when the Emoji style is picked again
     var layoutMode: LayoutMode
@@ -207,14 +207,15 @@ struct DockTileConfiguration: Identifiable, Codable, Hashable {
         // ConfigurationDefaults.iconFace (.apps, for NEW tiles): existing tiles must not change on upgrade.
         iconFace = try container.decodeIfPresent(IconFace.self, forKey: .iconFace) ?? .glyph
 
+        // v11 fields - per-type glyph memory (old configs have none saved)
+        savedSymbol = try container.decodeIfPresent(SavedGlyph.self, forKey: .savedSymbol)
+        savedEmoji = try container.decodeIfPresent(SavedGlyph.self, forKey: .savedEmoji)
+
+        // v12 fields - App Grid plate (old configs follow the system, as before)
         appsBackground = try container.decodeIfPresent(AppsGridBackground.self, forKey: .appsBackground)
             ?? ConfigurationDefaults.appsBackground
         appsBackgroundColor = try container.decodeIfPresent(String.self, forKey: .appsBackgroundColor)
             ?? ConfigurationDefaults.appsBackgroundColor
-
-        // v11 fields - per-type glyph memory (old configs have none saved)
-        savedSymbol = try container.decodeIfPresent(SavedGlyph.self, forKey: .savedSymbol)
-        savedEmoji = try container.decodeIfPresent(SavedGlyph.self, forKey: .savedEmoji)
 
         // v5 fields - last Dock position
         lastDockIndex = try container.decodeIfPresent(Int.self, forKey: .lastDockIndex)
@@ -226,7 +227,6 @@ struct DockTileConfiguration: Identifiable, Codable, Hashable {
     // MARK: - Coding Keys
 
     private enum CodingKeys: String, CodingKey {
-        case appsBackground, appsBackgroundColor
         // v1 fields
         case id, name, tintColor, symbolEmoji, layoutMode, appItems
         case isVisibleInDock, bundleIdentifier
@@ -244,6 +244,8 @@ struct DockTileConfiguration: Identifiable, Codable, Hashable {
         case iconFace
         // v11 fields
         case savedSymbol, savedEmoji
+        // v12 fields
+        case appsBackground, appsBackgroundColor
         // v5 fields
         case lastDockIndex
         // v6 fields
@@ -724,7 +726,6 @@ enum AppListEditor {
         return out
     }
 }
-
 
 /// App-grid plate settings are independent of the Symbol/Emoji face's tint and background.
 enum AppsGridBackground: String, Codable, CaseIterable, Sendable {

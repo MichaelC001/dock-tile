@@ -67,26 +67,47 @@ struct AppsBackgroundTests {
         }
     }
 
-    @Test("Custom colour reaches all appearance slots in the compiler working space")
+    @Test("Each compiled layer's empty slots take the plate's tone; the tinted slot is always dark glass")
+    func layerTones() {
+        typealias S = AppIconRenderStyle
+        func tones(_ background: AppsGridBackground, _ hex: String = "#224466") -> [Bool] {
+            [S.standard, .dark, .clearDark].map {
+                AppsFaceGrid.layerOnDarkGlass(slot: $0, background: background, customHex: hex)
+            }
+        }
+        // Follow System must bake exactly what main baked before backgrounds existed.
+        #expect(tones(.automatic) == [false, true, true])
+        #expect(tones(.charcoal) == [true, true, true])
+        #expect(tones(.light) == [false, false, true])
+        #expect(tones(.custom, "#224466") == [true, true, true])
+        #expect(tones(.custom, "#F0E0C0") == [false, false, true])
+    }
+
+    @Test("A plate counts as dark when white reads better on it than black")
+    func darkPlateThreshold() {
+        // Equal contrast falls at relative luminance ~0.179, between #757575 and #767676.
+        #expect(AppsFaceGrid.usesDarkPlate(background: .custom, customHex: "#757575", style: .defaultStyle))
+        #expect(!AppsFaceGrid.usesDarkPlate(background: .custom, customHex: "#767676", style: .defaultStyle))
+    }
+
+    @Test("Custom colour reaches every appearance slot as Generic RGB components, which macOS renders as the sRGB colour")
     func declarativeFill() throws {
-        let json = IconDocumentBuilder.appsFaceIconJSON(background: .custom, customHex: "#224466")
+        let json = try IconDocumentBuilder.appsFaceIconJSON(background: .custom, customHex: "#224466")
         let fill = try #require(json["fill"] as? [String: Any])
         let stops = try #require(fill["linear-gradient"] as? [String])
-        let expected = NSColor(srgbRed: 34.0 / 255, green: 68.0 / 255, blue: 102.0 / 255, alpha: 1)
-            .usingColorSpace(.genericRGB)!
-        let expectedStop = String(format: "srgb:%.5f,%.5f,%.5f,1.00000",
-                                  expected.redComponent, expected.greenComponent, expected.blueComponent)
+        // #224466 in Generic RGB, pinned as a literal so it does not mirror the code under test.
+        let expectedStop = "srgb:0.10358,0.20177,0.32542,1.00000"
         #expect(stops == [expectedStop, expectedStop])
         for spec in try #require(json["fill-specializations"] as? [[String: Any]]) {
             let value = try #require(spec["value"] as? [String: Any])
             #expect(value["linear-gradient"] as? [String] == stops)
         }
-        let charcoal = IconDocumentBuilder.appsFaceIconJSON(background: .charcoal)
+        let charcoal = try IconDocumentBuilder.appsFaceIconJSON(background: .charcoal, customHex: "#224466")
         #expect(charcoal["fill"] as? String == "system-dark")
         for spec in try #require(charcoal["fill-specializations"] as? [[String: Any]]) {
             #expect(spec["value"] as? String == "system-dark")
         }
-        let light = IconDocumentBuilder.appsFaceIconJSON(background: .light)
+        let light = try IconDocumentBuilder.appsFaceIconJSON(background: .light, customHex: "#224466")
         #expect(light["fill"] as? String == "system-light")
     }
 
@@ -133,9 +154,8 @@ struct AppsBackgroundTests {
     }
 
     @Test("The compiled custom plate is the actual colour returned by macOS IconServices",
-          .enabled(if: FileManager.default.fileExists(atPath: Self.compilerURL.path)))
+          .enabled(if: IconPipeline.isDeclarative && FileManager.default.fileExists(atPath: Self.compilerURL.path)))
     func compiledCustomPlate() throws {
-        guard #available(macOS 26.0, *) else { return }
         let scratch = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: scratch) }
         var pngs: [String: Data] = [:]
@@ -143,7 +163,7 @@ struct AppsBackgroundTests {
             pngs[IconDocumentBuilder.appsFaceImageName(for: style)] = try IconGenerator.generateAppsLayerPNG(minis: [])
         }
         let document = try IconDocumentBuilder.writeDocument(
-            json: IconDocumentBuilder.appsFaceIconJSON(background: .custom, customHex: "#224466"),
+            json: try IconDocumentBuilder.appsFaceIconJSON(background: .custom, customHex: "#224466"),
             layerPNGs: pngs, name: "AppIcon", parent: scratch)
         let app = scratch.appendingPathComponent("ColourProbe.app")
         let contents = app.appendingPathComponent("Contents")

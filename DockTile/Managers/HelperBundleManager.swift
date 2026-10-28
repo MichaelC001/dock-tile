@@ -890,9 +890,8 @@ final class HelperBundleManager {
                     fallbacks += styled.fallbacks
                     if style == .standard { standardMinis = styled.minis }
                     layerPNGs[IconDocumentBuilder.appsFaceImageName(for: style)] =
-                        try IconGenerator.generateAppsLayerPNG(minis: styled.minis, onDarkGlass: AppsFaceGrid.usesDarkPlate(
-                            background: config.appsBackground, customHex: config.appsBackgroundColor,
-                            style: style == .standard ? .defaultStyle : (style == .dark ? .dark : .tinted)))
+                        try IconGenerator.generateAppsLayerPNG(minis: styled.minis, onDarkGlass: AppsFaceGrid.layerOnDarkGlass(
+                            slot: style, background: config.appsBackground, customHex: config.appsBackgroundColor))
                 }
                 if fallbacks > 0 {
                     DiagnosticsLog.shared.log("tile", "Apps face for \(config.diagnosticName): \(fallbacks) styled render(s) unavailable — used the current-style icon")

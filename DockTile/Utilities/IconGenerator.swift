@@ -1331,13 +1331,13 @@ extension IconGenerator {
     }
 
     /// The Apps face baked as a flat bitmap: the icon-grid-inset squircle filled top-to-bottom
-    /// with the system gray pair, the mini grid on top. No stroke and no sheen, like the
-    /// compiled icon. The grays are the vendored compiler's resolution of `system-light` /
-    /// `system-dark` (`AppsFaceGrid.fillGrays`), so the bake, the preview and the compiled icon
-    /// agree. Clear/Tinted minis are desaturated to keep the legacy path's grayscale promise.
+    /// with the tile's plate (`AppsFaceGrid.fillColors`), the mini grid on top. No stroke and no
+    /// sheen, like the compiled icon. Under Follow System the plate is the vendored compiler's
+    /// resolution of `system-light` / `system-dark` (`AppsFaceGrid.fillGrays`), so the bake, the
+    /// preview and the compiled icon agree. Clear/Tinted minis are desaturated to keep the legacy path's grayscale promise.
     static func appsIcon(minis: [AppsFaceMini], size: CGSize, iconStyle: IconStyle,
-                         background: AppsGridBackground = ConfigurationDefaults.appsBackground,
-                         customHex: String = ConfigurationDefaults.appsBackgroundColor) -> NSImage {
+                         background: AppsGridBackground,
+                         customHex: String) -> NSImage {
         guard let bitmapRep = NSBitmapImageRep(
             bitmapDataPlanes: nil,
             pixelsWide: Int(size.width),
@@ -1383,15 +1383,15 @@ extension IconGenerator {
 
     /// The Apps face as the macOS 26 fallback `.icns` (light composition).
     static func generateAppsFallbackIcns(minis: [AppsFaceMini], outputURL: URL,
-                                         background: AppsGridBackground = ConfigurationDefaults.appsBackground,
-                                         customHex: String = ConfigurationDefaults.appsBackgroundColor) throws {
+                                         background: AppsGridBackground,
+                                         customHex: String) throws {
         try buildIcns(outputURL: outputURL) { appsIcon(minis: minis, size: $0, iconStyle: .defaultStyle, background: background, customHex: customHex) }
     }
 
     /// One Apps-face style variant `.icns` for the macOS 15 four-variant bake.
     static func generateAppsIcns(minis: [AppsFaceMini], outputURL: URL, iconStyle: IconStyle,
-                                 background: AppsGridBackground = ConfigurationDefaults.appsBackground,
-                                 customHex: String = ConfigurationDefaults.appsBackgroundColor) throws {
+                                 background: AppsGridBackground,
+                                 customHex: String) throws {
         try buildIcns(outputURL: outputURL) { appsIcon(minis: minis, size: $0, iconStyle: iconStyle, background: background, customHex: customHex) }
     }
 
