@@ -84,6 +84,19 @@ full-bleed tile reads ~1.24×). Artifacts: `dock.png`, `dock-window.png`, `measu
 measurer alone is safe locally (`swift Scripts/ci/dock-measure.swift out.png` captures the Dock
 window by ID, never a screen rect); the shell script rewrites the Dock and refuses to run off CI.
 
+**Dock SIGKILL check (on demand):** `gh workflow run ci.yml --ref <branch> -f dock_kill_check=true`
+adds `dock-kill-check` on macos-15 AND macos-26 (no build products needed). It proves what the
+2.6.2 Dock fix rests on: a persistent-apps write followed by `killall -KILL Dock` is kept, because
+launchd relaunches the Dock and the killed Dock cannot flush its stale list over ours (SIGTERM lost
+14/14 such writes in the 2026-10-29 experiment, docs/dock-modification-prior-art.md §6). Six
+trials (0.5 / 2.5 / 10 s after a prior restart, add then remove) each require a new Dock PID, the
+stub entry in the plist by `bundle-identifier`, and the running Dock's icon count via
+`dock-measure.swift --count-only`; an uncounted SIGTERM control reports `lost` (the runner
+reproduces the race) or `kept` (it does not, so the passes prove only the relaunch). Verdict =
+the `dock-kill-check: N/6 OK` line in `log.txt`; a capture that can't be made reads
+`capture: unavailable` and fails the job. `Scripts/ci/dock-kill-check.swift` rewrites the
+runner's Dock and refuses to run off CI. Re-run it on each new runner image or macOS release.
+
 **SwiftPM caching + resolve-retry (flaky-build fix)**: every build/test job caches `./build/SourcePackages` + `~/Library/Caches/org.swift.swiftpm` (keyed on `Package.resolved`) and runs a `-resolvePackageDependencies` step with retries **before** building. Firebase ships large binary xcframeworks (e.g. `grpc`) as binary targets downloaded during resolution; without this, every run re-downloaded them and a transient "network connection was lost" failed the build. A cache hit skips the download entirely; a cache miss retries (4×). A Firebase/dependency bump changes `Package.resolved` → first run is a cache miss (slower) that repopulates.
 
 ## Release Pipeline

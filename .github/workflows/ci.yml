@@ -20,6 +20,10 @@ on:
         description: "Also pin baked legacy tiles to the macOS 15 runner's Dock, screenshot and measure it"
         type: boolean
         default: false
+      dock_kill_check:
+        description: "Also prove on macOS 15 and 26 runners that a SIGKILLed Dock relaunches with our persistent-apps write"
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -394,4 +398,39 @@ jobs:
             dock-check/dock.png
             dock-check/dock-window.png
             dock-check/measure.txt
+          retention-days: 14
+
+  dock-kill-check:
+    name: Dock SIGKILL check (${{ matrix.os }}, on demand)
+    # Proof for the 2.6.2 Dock write-race fix: write persistent-apps, SIGKILL the Dock, and require
+    # launchd to relaunch it with our write kept, both in the plist and in the running Dock's own
+    # icon count (Scripts/ci/dock-kill-check.swift). Six trials at 0.5 / 2.5 / 10 s after a prior
+    # restart, plus an uncounted SIGTERM control. The verdict is the `dock-kill-check: N/6 OK` line,
+    # never the job colour. Opt-in via `dock_kill_check` because it rewrites the runner's Dock.
+    # Uses no build products, so no `needs`.
+    if: github.event_name == 'workflow_dispatch' && inputs.dock_kill_check
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-26]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Write, SIGKILL the Dock, check the write was kept
+        run: |
+          set -o pipefail
+          mkdir -p dock-kill-check
+          swift Scripts/ci/dock-kill-check.swift "$PWD/dock-kill-check" 2>&1 | tee dock-kill-check/log.txt
+
+      - name: Upload captures and log
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dock-kill-check-${{ matrix.os }}
+          path: |
+            dock-kill-check/*.png
+            dock-kill-check/log.txt
           retention-days: 14
