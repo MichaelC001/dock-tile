@@ -22,10 +22,21 @@ import Foundation
 @Suite("Helper self-heal triage")
 struct HelperSelfHealClassifyTests {
 
-    private func classify(pinned: Bool, exists: Bool, icons: Bool, baked: Bool) -> HelperMigrationManager.HelperHealth {
+    private func classify(pinned: Bool, exists: Bool, icons: Bool, baked: Bool, entry: Bool = true) -> HelperMigrationManager.HelperHealth {
         HelperMigrationManager.classifyHelperHealth(
             isPinnedInDock: pinned, bundleExists: exists,
-            iconsComplete: icons, bakedVersionMatchesCurrent: baked)
+            iconsComplete: icons, bakedVersionMatchesCurrent: baked,
+            dockEntryIsCurrent: entry)
+    }
+
+    @Test("Pinned + healthy bundle, but the Dock entry is stale → heal (the 2026-10-29 stranded entry)")
+    func pinnedStaleDockEntry() {
+        #expect(classify(pinned: true, exists: true, icons: true, baked: true, entry: false) == .heal)
+    }
+
+    @Test("Unpinned tile with a stale entry is still never a repair target")
+    func unpinnedStaleDockEntryNeverHeals() {
+        #expect(classify(pinned: false, exists: true, icons: true, baked: true, entry: false) == .healthy)
     }
 
     @Test("Unpinned tile is never a repair target, whatever its on-disk state (drafts are safe)")

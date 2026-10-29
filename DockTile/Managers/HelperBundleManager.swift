@@ -486,6 +486,18 @@ final class HelperBundleManager {
         return ids
     }
 
+    /// Each pinned bundle id → its entries' paths in Dock order (nil = unparseable), in ONE
+    /// synchronized read — what self-heal feeds to the shared `dockEntriesAreCurrent` predicate.
+    func pinnedEntryPaths() -> [String: [String?]] {
+        var paths: [String: [String?]] = [:]
+        for entry in readPersistentApps() {
+            if let id = (entry["tile-data"] as? [String: Any])?["bundle-identifier"] as? String {
+                paths[id, default: []].append(Self.dockEntryPath(entry))
+            }
+        }
+        return paths
+    }
+
     // MARK: - Copy Diagnostics icon inventory
 
     /// Per-pinned-helper icon-shape inventory for Copy Diagnostics (Dock icon-size-flap
@@ -1713,8 +1725,9 @@ final class HelperBundleManager {
     /// batch — which regenerated in place and only restarted the Dock — kept showing stale icons
     /// until the user manually re-configured each tile.
     func refreshDockEntry(for config: DockTileConfiguration) {
-        guard findInDock(bundleId: config.bundleIdentifier) != nil else { return }
-        let index = findDockIndex(bundleId: config.bundleIdentifier)
+        // findDockIndex matches the bundle id BEFORE parsing the URL (findInDock skips an
+        // unparseable entry), so the stale entries self-heal flags are re-seated too.
+        guard let index = findDockIndex(bundleId: config.bundleIdentifier) else { return }
         guard removeFromDockPlist(bundleId: config.bundleIdentifier) else { return }
         addToDock(at: helperPath(for: config), atIndex: index)
     }

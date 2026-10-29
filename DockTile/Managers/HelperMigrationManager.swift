@@ -20,6 +20,23 @@ final class HelperMigrationManager {
     /// so the throttle is static — mirrors `ConfigurationManager.hasScannedForMissingApps`).
     private static var didSelfHeal = false
 
+    /// Once-per-launch guard for the WHOLE launch sequence (migrate → scan → self-heal) in the main
+    /// window's `.task`. WHY: that `.task` runs again when the window is reopened during a launch
+    /// (Dock click, deep link, ⌘,) while the first one is still suspended inside its batch — its
+    /// cancellation doesn't stop the batch. A migration-only guard let the second pass go straight
+    /// to self-heal, which read the tile mid-rebuild as icon-incomplete and the batch's unreached
+    /// tiles as built by an older version, and started a second batch: two batches then kill the
+    /// Dock in alternation. Each launch starts with the flag cleared, so convergence across
+    /// launches is unchanged.
+    private static var didStartLaunchMaintenance = false
+
+    /// `true` exactly once per launch; the caller runs the launch sequence only then.
+    static func beginLaunchMaintenance() -> Bool {
+        guard !didStartLaunchMaintenance else { return false }
+        didStartLaunchMaintenance = true
+        return true
+    }
+
     init(configManager: ConfigurationManager) {
         self.configManager = configManager
     }
@@ -124,11 +141,12 @@ final class HelperMigrationManager {
 
     /// Version-independent self-heal: repair pinned tiles whose on-disk bundle is broken in a way
     /// normal migration misses — because a *pre-fix* app version stamped `helperAppVersion` current
-    /// while the bundle is actually missing, structurally corrupt, or built by an older app. Keys on
-    /// the ACTUAL on-disk state, not the config stamp, so it catches damage the (config-stale-keyed)
+    /// while the bundle is actually missing, structurally corrupt, or built by an older app — or
+    /// whose Dock entry is stale (the shared `dockEntriesAreCurrent` predicate). Keys on the ACTUAL
+    /// on-disk and Dock state, not the config stamp, so it catches damage the (config-stale-keyed)
     /// migration skips.
     ///
-    /// **Draft-safe by construction**: gated on `pinnedBundleIds` (a reliable, synchronized Dock
+    /// **Draft-safe by construction**: gated on `pinnedEntryPaths` (a reliable, synchronized Dock
     /// read). A brand-new tile the user hasn't Added to the Dock is never in that set, so it is
     /// never touched — repairing only already-pinned tiles cannot create an unwanted pin.
     ///
@@ -140,8 +158,9 @@ final class HelperMigrationManager {
         let helperManager = HelperBundleManager.shared
         let currentVersion = HelperBundleManager.currentAppVersion
 
-        // One synchronized Dock read for the whole sweep.
-        let pinned = helperManager.pinnedBundleIds()
+        // One synchronized Dock read for the whole sweep: each pinned bundle id → its entries' paths.
+        let entries = helperManager.pinnedEntryPaths()
+        let pinned = Set(entries.keys)
         guard !pinned.isEmpty else { return }
 
         var toHeal: [DockTileConfiguration] = []
@@ -150,15 +169,21 @@ final class HelperMigrationManager {
             let bundleExists = bundlePath != nil
             let iconsComplete = bundlePath.map { helperManager.helperIconsComplete(at: $0) } ?? false
             let bakedMatches = bundlePath.flatMap { helperManager.helperBakedVersion(at: $0) } == currentVersion
+            // A missing bundle already heals through bundleExists; an unparseable entry is stale.
+            let entryCurrent = bundlePath.map {
+                HelperBundleManager.dockEntriesAreCurrent(entries[config.bundleIdentifier] ?? [], helperPath: $0.path,
+                                                          sameFile: HelperBundleManager.isSameFile)
+            } ?? true
 
             if Self.classifyHelperHealth(
                 isPinnedInDock: true,
                 bundleExists: bundleExists,
                 iconsComplete: iconsComplete,
-                bakedVersionMatchesCurrent: bakedMatches
+                bakedVersionMatchesCurrent: bakedMatches,
+                dockEntryIsCurrent: entryCurrent
             ) == .heal {
                 DiagnosticsLog.shared.log("selfheal",
-                    "Pinned tile '\(config.name)' needs repair (exists=\(bundleExists), icons=\(iconsComplete), bakedCurrent=\(bakedMatches))")
+                    "Pinned tile '\(config.name)' needs repair (exists=\(bundleExists), icons=\(iconsComplete), bakedCurrent=\(bakedMatches), entry=\(entryCurrent))")
                 toHeal.append(config)
             }
         }
@@ -323,12 +348,17 @@ final class HelperMigrationManager {
         isPinnedInDock: Bool,
         bundleExists: Bool,
         iconsComplete: Bool,
-        bakedVersionMatchesCurrent: Bool
+        bakedVersionMatchesCurrent: Bool,
+        dockEntryIsCurrent: Bool
     ) -> HelperHealth {
         guard isPinnedInDock else { return .healthy }
         if !bundleExists { return .heal }
         if !iconsComplete { return .heal }
         if !bakedVersionMatchesCurrent { return .heal }
+        // A healthy bundle whose Dock entry is stale (wrong path, unparseable, duplicated — the
+        // shared `dockEntriesAreCurrent` predicate): the 2026-10-29 rename left exactly this, and a
+        // bundle-only check called it healthy forever.
+        if !dockEntryIsCurrent { return .heal }
         return .healthy
     }
 
