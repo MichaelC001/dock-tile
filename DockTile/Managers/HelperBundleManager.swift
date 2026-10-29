@@ -2082,6 +2082,20 @@ final class HelperBundleManager {
     /// skips them — Q12).
     var verifyingBundleIds: Set<String> { Set(verifyingCounts.keys) }
 
+    /// Whether any of our Dock operations is running for `bundleId`: a build (install or
+    /// regenerate), a removal, or a verification (a batch checking it). The Dock-plist watcher
+    /// leaves such a tile alone. NOT the build lock: `canBeginBundleBuild` sees only builds, so a
+    /// Hide is never refused because a batch is verifying (Q9).
+    nonisolated static func dockOperationInFlight(bundleId: String, building: Set<String>,
+                                                  removing: Set<String>, verifying: Set<String>) -> Bool {
+        building.contains(bundleId) || removing.contains(bundleId) || verifying.contains(bundleId)
+    }
+
+    func isDockOperationInFlight(bundleId: String) -> Bool {
+        Self.dockOperationInFlight(bundleId: bundleId, building: buildingBundleIds,
+                                   removing: removingBundleIds, verifying: verifyingBundleIds)
+    }
+
     /// Restart the Dock and verify `expectations`, retrying once (`runDockVerification`). Runs in
     /// an unstructured task on purpose: once the Dock is killed the verification must finish, and a
     /// cancelled caller (the main window's `.task`, closed mid-batch) would otherwise turn every

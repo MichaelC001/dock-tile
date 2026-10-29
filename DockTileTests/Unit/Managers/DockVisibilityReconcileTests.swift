@@ -18,14 +18,28 @@ struct DockVisibilityReconcileTests {
         visible: Bool,
         inDock: Bool,
         helperExists: Bool,
-        reconcile: Bool
+        reconcile: Bool,
+        inFlight: Bool = false
     ) -> ConfigurationManager.DockVisibilityResolution {
         ConfigurationManager.resolveDockVisibility(
             isVisibleInConfig: visible,
             isActuallyInDock: inDock,
             helperExists: helperExists,
-            reconcileDockedHiddenTiles: reconcile
+            reconcileDockedHiddenTiles: reconcile,
+            operationInFlight: inFlight
         )
+    }
+
+    // MARK: - A Dock operation in flight (2.6.2)
+
+    @Test("A tile mid-install is not marked hidden by its own plist removal")
+    func inFlightOverridesMarkHidden() {
+        #expect(resolve(visible: true, inDock: false, helperExists: true, reconcile: false, inFlight: true) == .inSync)
+    }
+
+    @Test("A tile mid-operation is never removed by the launch reconcile")
+    func inFlightOverridesRemoveFromDock() {
+        #expect(resolve(visible: false, inDock: true, helperExists: true, reconcile: true, inFlight: true) == .inSync)
     }
 
     // MARK: - Direction 1: visible in config, absent from Dock

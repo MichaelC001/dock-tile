@@ -380,3 +380,23 @@ struct DockExpectationTests {
         #expect(fixes == ["t"])
     }
 }
+
+@Suite("Dock operation in flight")
+struct DockOperationInFlightTests {
+
+    @Test("A tile a batch is verifying counts as in flight (Q12)")
+    func verifyingCountsAsInFlight() {
+        #expect(HelperBundleManager.dockOperationInFlight(bundleId: "t", building: [], removing: [], verifying: ["t"]))
+    }
+
+    @Test("A tile being built or removed counts as in flight")
+    func buildingOrRemovingCountsAsInFlight() {
+        #expect(HelperBundleManager.dockOperationInFlight(bundleId: "t", building: ["t"], removing: [], verifying: []))
+        #expect(HelperBundleManager.dockOperationInFlight(bundleId: "t", building: [], removing: ["t"], verifying: []))
+    }
+
+    @Test("Other tiles' operations don't count")
+    func otherTilesDoNotCount() {
+        #expect(!HelperBundleManager.dockOperationInFlight(bundleId: "t", building: ["u"], removing: ["u"], verifying: ["u"]))
+    }
+}

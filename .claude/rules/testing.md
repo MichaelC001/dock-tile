@@ -33,7 +33,7 @@ The recurring regressions came from critical invariants buried in `@MainActor` s
 touching real CFPreferences/FileManager — untestable, so unguarded. When a regression-prone
 **decision** lives in a singleton/view, extract the rule into a `nonisolated static func` (or
 plain `static` on an already-`@MainActor` type) taking plain values, delegate the call site to
-it, and unit-test the seam so a broken rule fails loudly. Existing seams: `resolveDockVisibility`,
+it, and unit-test the seam so a broken rule fails loudly. Existing seams: `resolveDockVisibility` (an operation in flight → `.inSync` before any rule; `DockVisibilityReconcileTests`) + `HelperBundleManager.dockOperationInFlight` (building, removing or verifying; `DockOperationInFlightTests`),
 `IconStyle.from(…isDarkMode:)` / `.resolve(…isDarkMode:)` (unrecognised value → nil = don't act, never Default; the observed macOS value set is guarded by `IconStyleResolveTests`),
 `HelperBundleManager.iconMatchesStyle` (launch self-heal: live icon vs the resolved style's variant, byte-compared; unanswerable → match — guarded by `HelperIconMatchTests`),
 `shouldReregisterOnLaunch`, `classifyForMigration`,

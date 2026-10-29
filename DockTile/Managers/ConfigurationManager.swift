@@ -632,11 +632,17 @@ final class ConfigurationManager: ObservableObject {
                 ? HelperBundleManager.shared.helperExists(for: config)
                 : false
 
+            let operationInFlight = HelperBundleManager.shared.isDockOperationInFlight(bundleId: config.bundleIdentifier)
+            if operationInFlight, config.isVisibleInDock != isActuallyInDock {
+                DiagnosticsLog.shared.log("sync", "\(config.diagnosticName) Dock operation in flight — not reconciling", verbose: true)
+            }
+
             switch Self.resolveDockVisibility(
                 isVisibleInConfig: config.isVisibleInDock,
                 isActuallyInDock: isActuallyInDock,
                 helperExists: helperExists,
-                reconcileDockedHiddenTiles: reconcileDockedHiddenTiles
+                reconcileDockedHiddenTiles: reconcileDockedHiddenTiles,
+                operationInFlight: operationInFlight
             ) {
             case .inSync:
                 break
@@ -700,8 +706,14 @@ final class ConfigurationManager: ObservableObject {
         isVisibleInConfig: Bool,
         isActuallyInDock: Bool,
         helperExists: Bool,
-        reconcileDockedHiddenTiles: Bool
+        reconcileDockedHiddenTiles: Bool,
+        operationInFlight: Bool
     ) -> DockVisibilityResolution {
+        // A tile whose Dock operation is still running (built, removed, or verified by a batch) is
+        // mid-change: install removes its entry early and re-adds it seconds later, and reacting to
+        // that gap marked the tile hidden. The worst case of skipping is "visible but absent" until
+        // the next Dock change or launch — never "hidden but pinned".
+        if operationInFlight { return .inSync }
         if isVisibleInConfig, !isActuallyInDock {
             // Direction 1: stored as visible but gone from the Dock. Only mark hidden if the
             // tile was actually pinned at some point (its helper bundle is on disk). A
