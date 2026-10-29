@@ -1747,7 +1747,82 @@ final class HelperBundleManager {
         addToDock(at: helperPath(for: config), atIndex: index)
     }
 
-    /// Add app to Dock without launching it (only if not already present)
+    // MARK: - Dock entry identity (2.6.2)
+    //
+    // ONE predicate for "is this tile's Dock entry current?", shared by addToDock, the verified
+    // restart and self-heal so they can never disagree: exactly one entry, and it is the SAME FILE
+    // as the helper (device + inode). WHY: on 2026-10-29 a rename + Update left an entry with the
+    // right bundle id pointing at the deleted old folder, and every bundle-id-only check called it
+    // fine. Same-file, not same-bundle-id: helperPath(for:) already finds the bundle BY id, so a
+    // second path carrying that id is a leftover copy that would launch old code.
+
+    /// The bundle id an entry carries in `tile-data` (our addToDock always writes it).
+    nonisolated private static func tileBundleId(_ entry: [String: Any]) -> String? {
+        (entry["tile-data"] as? [String: Any])?["bundle-identifier"] as? String
+    }
+
+    /// The entry's `_CFURLString` as a file path, normalised like `findInDock` (`%20` decoded,
+    /// trailing slash trimmed). Accepts a plain absolute path too, as `findInDock` does. nil when
+    /// the string is missing or any other scheme.
+    nonisolated static func dockEntryPath(_ entry: [String: Any]) -> String? {
+        guard let tileData = entry["tile-data"] as? [String: Any],
+              let fileData = tileData["file-data"] as? [String: Any],
+              let urlString = fileData["_CFURLString"] as? String else { return nil }
+        let rawPath: String
+        if urlString.hasPrefix("/") {
+            rawPath = urlString
+        } else if let url = URL(string: urlString), url.isFileURL {
+            rawPath = url.path
+        } else {
+            return nil
+        }
+        return "/" + rawPath.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+    }
+
+    /// One path per entry carrying `bundleId`, in Dock order; nil for an entry that can't be parsed.
+    nonisolated static func dockEntryPaths(bundleId: String, in apps: [[String: Any]]) -> [String?] {
+        apps.filter { tileBundleId($0) == bundleId }.map(dockEntryPath)
+    }
+
+    /// Current = exactly one entry, parseable, and the same file as the helper.
+    nonisolated static func dockEntriesAreCurrent(_ paths: [String?], helperPath: String,
+                                                  sameFile: (String, String) -> Bool) -> Bool {
+        guard paths.count == 1, let path = paths[0] else { return false }
+        return sameFile(path, helperPath)
+    }
+
+    /// Same file by `stat()` device + inode. `stat()` follows symlinks, and the
+    /// `/System/Volumes/Data` spelling is the same file; a missing path is never the same file.
+    nonisolated static func isSameFile(_ a: String, _ b: String) -> Bool {
+        var statA = stat(), statB = stat()
+        guard stat(a, &statA) == 0, stat(b, &statB) == 0 else { return false }
+        return statA.st_dev == statB.st_dev && statA.st_ino == statB.st_ino
+    }
+
+    /// `apps` with this tile's entries replaced by `newEntry`, or nil when they are already current
+    /// (no write needed). A stale, unparseable or duplicate entry is replaced in the FIRST slot it
+    /// held; a missing one goes in at `atIndex` when that is in range, else at the end. Entries of
+    /// other bundle ids are never touched.
+    nonisolated static func reconciledDockApps(_ apps: [[String: Any]], bundleId: String, path: String,
+                                               newEntry: [String: Any], atIndex: Int?,
+                                               sameFile: (String, String) -> Bool) -> [[String: Any]]? {
+        if dockEntriesAreCurrent(dockEntryPaths(bundleId: bundleId, in: apps), helperPath: path, sameFile: sameFile) {
+            return nil
+        }
+        var result = apps.filter { tileBundleId($0) != bundleId }
+        if let firstSlot = apps.firstIndex(where: { tileBundleId($0) == bundleId }) {
+            // Every entry before the first match survived the filter, so the slot index is unchanged.
+            result.insert(newEntry, at: firstSlot)
+        } else if let index = atIndex, (0...result.count).contains(index) {
+            result.insert(newEntry, at: index)
+        } else {
+            result.append(newEntry)
+        }
+        return result
+    }
+
+    /// Add app to Dock without launching it. When this tile already has entries, they are kept if
+    /// current (`dockEntriesAreCurrent`) and otherwise replaced in their slot (`reconciledDockApps`).
     /// Uses CFPreferences API (industry standard - same as dockutil) for reliable sync
     /// - Parameters:
     ///   - appPath: Path to the app bundle
@@ -1766,14 +1841,6 @@ final class HelperBundleManager {
             print("   ⚠️ Could not read bundle ID from app")
             return
         }
-
-        // Check if already in Dock by bundle ID (more reliable than path)
-        if findInDock(bundleId: bundleId) != nil {
-            print("   ✓ Already in Dock (bundle ID: \(bundleId)) - no action needed")
-            return
-        }
-
-        print("   Not in Dock yet, adding...")
 
         // Read current persistent-apps using CFPreferences (industry standard approach)
         // This ensures we're reading from cfprefsd cache, not stale file on disk
@@ -1810,14 +1877,18 @@ final class HelperBundleManager {
             "tile-type": "file-tile"
         ]
 
-        // Add to persistent apps (at specific index if provided, otherwise append)
-        var updatedApps = currentApps
-        if let index = atIndex, index >= 0, index <= updatedApps.count {
-            updatedApps.insert(newEntry, at: index)
-            print("   Inserting at index \(index)")
-        } else {
-            updatedApps.append(newEntry)
-            print("   Appending to end")
+        // Keep this tile's entry if it is current; otherwise replace it in its slot (or insert it at
+        // the index / end). A same-bundle-id entry at another path is NOT "already in Dock": that is
+        // exactly the stale entry the 2026-10-29 rename left behind.
+        guard let updatedApps = Self.reconciledDockApps(currentApps, bundleId: bundleId, path: appPathString,
+                                                        newEntry: newEntry, atIndex: atIndex,
+                                                        sameFile: Self.isSameFile) else {
+            print("   ✓ Already in Dock at this path - no action needed")
+            return
+        }
+        let replacedPaths = Self.dockEntryPaths(bundleId: bundleId, in: currentApps)
+        if !replacedPaths.isEmpty {
+            DiagnosticsLog.shared.log("dock", "Replacing stale Dock entry at \(replacedPaths.map { $0 ?? "<unparseable>" }) with \(appPathString) (\(bundleId))")
         }
 
         // Write using CFPreferences API (industry standard - same approach as dockutil)
