@@ -129,12 +129,35 @@ problem the synchronize-first reads defend against. **So every restart is write-
 the Dock before the write lands and the plist and the running Dock then disagree. It depends on launchd
 relaunching a killed Dock (KeepAlive), proven on macOS 15 and 26 by the `dock-kill-check` CI job
 (ci-release.md) and on macOS 27 by §6. **Accepted cost:** a Dock edit the Dock hasn't saved yet (an icon
-dragged a second before an Update) is lost. Every Dock mutation must still **verify** afterwards rather than
-assume it stuck: `installHelper` re-adds + restarts if `findInDock` misses, and `removeFromDock(for:)`
-retries via `quitDockAndWaitForExit()` — re-writing with the Dock process actually gone, so nothing
-is left alive to flush over us. Measured 2026-08-29: plain write-then-`killall` stranded 7 entries
-under concurrent restarts while a single quit-then-write pass cleared them; on a settled Dock the
-plain path succeeded 12/12, so it stays the fast path and quit-and-wait is the retry only.
+dragged a second before an Update) is lost.
+
+**Every Dock change is a verified restart (critical, 2.6.2)**: install, Hide, delete and the
+migration / self-heal / Popover Apply batch all go through `HelperBundleManager.restartDockAndVerify`
+— SIGKILL, wait for a Dock with a NEW pid (≤ 5 s) + 1 s, then check each tile with the ONE shared
+predicate (`dockEntriesAreCurrent`: exactly one entry, the same FILE as the helper by device + inode;
+absent = no entry with the bundle id), retry the unmet ones once, never loop (`runDockVerification`,
+`DockExpectationTests`). The same predicate drives `addToDock`'s reconcile and self-heal, so the three
+can never disagree. It replaced bundle-id-only checks: on 2026-10-29 a rename + Update left an entry
+with the right bundle id at the DELETED old folder and every check called it fine.
+- **What a failure does:** Tile Detail actions throw `dockChangeNotKept`, shown in the red error text
+  under the editor like every other failure on that button (and recorded as a Crashlytics non-fatal);
+  the success-path bookkeeping is skipped, so one successful retry completes it. Delete, the batch and
+  the launch stuck-tile sweep only log.
+- **Limits, accepted:** it reads the plist, so it can't see the plist and the running Dock disagree
+  (that needs Accessibility, which the main app has only with Dock Lock on); and the +1 s read can come
+  before the new Dock's own write-back a few seconds after launch — accepted, because that write-back
+  carries the list the new Dock loaded, which is ours, and self-heal catches a later drop.
+- **It ignores the caller's cancellation**: it runs in an unstructured task, because once the Dock is
+  killed the check must finish (a cancelled window `.task` would otherwise turn the PID poll into a spin).
+- **Batches (Q9/Q12/Q16/Q18):** the batch expects presence only for tiles pinned BEFORE its re-seat
+  (`batchExpectations`), verifies outside the per-tile build locks (so a Hide is never refused while a
+  batch checks), and holds its tiles in a per-tile COUNT (`verifyingBundleIds`) that the Dock-plist
+  watcher skips. Any retry skips a tile another operation is building or removing, except the caller's
+  own (`retryableExpectations`), and the re-check covers only what was retried.
+- **Residuals, accepted:** a tile dragged off within ~1 s of a restart can be re-pinned by a retry
+  (Q8); a Hide that starts AND finishes inside a batch's ~1 s check can be re-pinned and is then removed
+  by the next launch's reconcile (Q16); a delete during a batch's check logs a false "STILL" line; and
+  Popover Apply overlapping the launch batch restarts the Dock in turns but converges (Q19).
 
 **Restart the Dock only when it actually changed (critical)**: every removal path is gated on
 real work happening — `removeFromDock(for:)` no-ops (no plist write, no restart, no wait) when the

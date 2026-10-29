@@ -64,6 +64,7 @@ Keep `%@`-style placeholders exactly as they are. `\n` means a line break, `\|` 
 | `empty.noTiles` | No Tiles | Нет плиток | machine | Empty state text in sidebar |
 | `error.appTranslocated` | Dock Tile is running from a temporary, read-only location and can't create tiles. Move it to your Applications folder and try again. | Программа Dock Tile запущена из временного расположения, доступного только для чтения, и не может создавать плитки. Переместите ее в папку «Программы» и повторите попытку. | machine | Error when the app is translocated and cannot generate helper bundles |
 | `error.bundleBuildInProgress` | This tile is already being rebuilt. Wait for that to finish, then try again. | Эта плитка уже пересоздается. Дождитесь завершения и повторите попытку. | machine | Error when a second build is requested for a tile whose helper bundle is already being built |
+| `error.dockChangeNotKept` | The Dock didn't keep this change. Try again. | Dock не сохранил это изменение. Повторите попытку. | machine | Error when Dock Tile wrote a change to the Dock (add, update or hide a tile) but the Dock did not keep it, even after one retry |
 | `error.failedToCodeSign` | Failed to code sign helper bundle | Не удалось подписать вспомогательный пакет | machine | Error when code signing fails |
 | `error.failedToCopyBundle` | Failed to copy bundle | Не удалось скопировать пакет | machine | Error when bundle copy fails |
 | `error.failedToReadInfoPlist` | Failed to read Info.plist | Не удалось прочитать Info.plist | machine | Error when Info.plist cannot be read |

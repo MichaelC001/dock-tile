@@ -3079,6 +3079,60 @@
         }
       }
     },
+    "error.dockChangeNotKept": {
+      "comment": "Error when Dock Tile wrote a change to the Dock (add, update or hide a tile) but the Dock did not keep it, even after one retry",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Das Dock hat diese Änderung nicht übernommen. Versuche es erneut."
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Dock didn't keep this change. Try again."
+          }
+        },
+        "en-AU": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Dock didn't keep this change. Try again."
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Dock didn't keep this change. Try again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Le Dock n’a pas conservé cette modification. Réessayez."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Dockはこの変更を保持しませんでした。もう一度お試しください。"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Dock не сохранил это изменение. Повторите попытку."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "程序坞未能保留此更改。请再试一次。"
+          }
+        }
+      }
+    },
     "error.failedToCodeSign": {
       "comment": "Error when code signing fails",
       "extractionState": "manual",

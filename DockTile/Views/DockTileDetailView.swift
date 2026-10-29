@@ -742,6 +742,9 @@ struct DockTileDetailView: View {
                 AnalyticsService.shared.record(error, context: "performDockAction",
                                                keys: ["bundle_id": editedConfig.bundleIdentifier,
                                                       "visible": String(editedConfig.isVisibleInDock)])
+                // The Dock didn't keep the change: let the button follow the real Dock
+                // (Add to Dock vs Update) rather than the state from before the attempt.
+                if (error as? HelperBundleError) == .dockChangeNotKept { updateDockState() }
             }
             isProcessing = false
         }

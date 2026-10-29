@@ -1508,6 +1508,12 @@ enum AppStrings {
             value: "This tile is already being rebuilt. Wait for that to finish, then try again.",
             comment: "Error when a second build is requested for a tile whose helper bundle is already being built"
         )
+
+        static let dockChangeNotKept = NSLocalizedString(
+            "error.dockChangeNotKept",
+            value: "The Dock didn't keep this change. Try again.",
+            comment: "Error when Dock Tile wrote a change to the Dock (add, update or hide a tile) but the Dock did not keep it, even after one retry"
+        )
     }
 
     // MARK: - Log Messages

@@ -45,6 +45,8 @@ final class HelperBundleManager {
 
     /// Track bundle IDs currently being removed to prevent double-removal
     private var removingBundleIds: Set<String> = []
+    /// Per-tile count of `restartDockAndVerify` runs checking it (see `verifyingBundleIds`).
+    private var verifyingCounts: [String: Int] = [:]
 
     // MARK: - Initialization
 
@@ -201,31 +203,13 @@ final class HelperBundleManager {
         // If this is an update, restore the original position; otherwise append to end
         addToDock(at: helperPath, atIndex: originalDockIndex)
 
-        // 6. Restart Dock to apply changes
+        // 6–8. Restart the Dock, then verify the entry is at THIS helper's path (retrying once).
+        // A failure is thrown at the end, after the helper is launched: the bundle is built either way.
         AnalyticsService.shared.setBreadcrumb("dock_restart", for: "install_step")
-        restartDock()
-
-        // 7. Wait for Dock to fully restart and stabilize
-        // The Dock takes time to reload the plist and render
-        try await Task.sleep(nanoseconds: 800_000_000) // 0.8 seconds
-
-        // 8. Verify the app is in Dock after restart
-        var verifyCount = 0
-        while findInDock(bundleId: config.bundleIdentifier) == nil && verifyCount < 5 {
-            print("   Waiting for Dock to register app (attempt \(verifyCount + 1))...")
-            try await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
-            verifyCount += 1
-        }
-
-        if findInDock(bundleId: config.bundleIdentifier) != nil {
-            print("   ✓ App registered in Dock")
-        } else {
-            print("   ⚠️ App not found in Dock after restart, attempting to re-add...")
-            // Try adding again - sometimes the first write doesn't take
-            addToDock(at: helperPath)
-            restartDock()
-            try await Task.sleep(nanoseconds: 500_000_000)
-        }
+        let dockKept = await restartDockAndVerify(
+            [DockExpectation(bundleId: config.bundleIdentifier, path: helperPath.path,
+                             index: originalDockIndex, name: config.diagnosticName)],
+            ownedBundleIds: [config.bundleIdentifier])
 
         // 9. Launch the helper app (Dock doesn't auto-launch persistent apps)
         AnalyticsService.shared.setBreadcrumb("launch", for: "install_step")
@@ -251,6 +235,7 @@ final class HelperBundleManager {
 
         AnalyticsService.shared.setBreadcrumb("done", for: "install_step")
         print("✅ Helper installed at: \(helperPath.path)")
+        guard dockKept else { throw HelperBundleError.dockChangeNotKept }
         return true
     }
 
@@ -334,9 +319,16 @@ final class HelperBundleManager {
             print("   ✓ No helper bundle found to delete")
         }
 
-        // Restart Dock after bundle is deleted to avoid "?" icon — but only if the Dock changed
+        // Restart Dock after bundle is deleted to avoid "?" icon — but only if the Dock changed.
+        // A removal that didn't stick is logged only: the config is already gone, and the caller
+        // only records errors.
         if didRemoveFromDock {
-            restartDock()
+            let removed = await restartDockAndVerify(
+                [DockExpectation(bundleId: config.bundleIdentifier, path: nil, index: nil, name: config.diagnosticName)],
+                ownedBundleIds: [config.bundleIdentifier])
+            if !removed {
+                DiagnosticsLog.shared.log("dock", "Delete of \(config.diagnosticName): its Dock entry is still there after the retry")
+            }
         } else {
             print("   ✓ Tile was not in the Dock — Dock not restarted")
         }
@@ -714,36 +706,15 @@ final class HelperBundleManager {
         let didRemoveFromPlist = removeFromDockPlist(bundleId: config.bundleIdentifier)
 
         if didRemoveFromPlist {
-            // Restart Dock to apply changes
-            restartDock()
-
-            // Wait for Dock to fully restart and plist to update
-            try await waitForTileRemoval(bundleId: config.bundleIdentifier)
-
-            if findInDock(bundleId: config.bundleIdentifier) == nil {
-                print("   ✓ Verified tile removed from Dock")
-                DiagnosticsLog.shared.log("dock", "Removed \(config.diagnosticName) from Dock (verified)")
-            } else {
-                // The entry came back: a Dock still holding the OLD persistent-apps in memory
-                // flushed it over our write when `killall` signalled it (measured — repeated
-                // plain removals left entries stranded, and this is the 'STILL in Dock after
-                // restart' line from the July 2026 report). Re-remove with the Dock actually
-                // gone, so there is no process left to flush stale prefs on top of us.
-                print("   ⚠️ Tile reappeared after restart (Dock flushed stale prefs) — retrying")
-                DiagnosticsLog.shared.log("dock", "\(config.diagnosticName) reappeared in Dock after restart — retrying removal with the Dock quit")
-
-                quitDockAndWaitForExit()
-                removeFromDockPlist(bundleId: config.bundleIdentifier)
-                try await waitForTileRemoval(bundleId: config.bundleIdentifier)
-
-                if findInDock(bundleId: config.bundleIdentifier) == nil {
-                    print("   ✓ Verified tile removed from Dock (on retry)")
-                    DiagnosticsLog.shared.log("dock", "Removed \(config.diagnosticName) from Dock (verified on retry)")
-                } else {
-                    print("   ⚠️ Tile still in Dock after retry")
-                    DiagnosticsLog.shared.log("dock", "\(config.diagnosticName) STILL in Dock after retry — removal did not take")
-                }
-            }
+            // Restart, then verify no entry for this tile is left (retrying once). A removal that
+            // did not stick THROWS: returning normally would make the caller store the tile hidden
+            // while it is still pinned.
+            let removed = await restartDockAndVerify(
+                [DockExpectation(bundleId: config.bundleIdentifier, path: nil, index: nil, name: config.diagnosticName)],
+                ownedBundleIds: [config.bundleIdentifier])
+            guard removed else { throw HelperBundleError.dockChangeNotKept }
+            print("   ✓ Verified tile removed from Dock")
+            DiagnosticsLog.shared.log("dock", "Removed \(config.diagnosticName) from Dock (verified)")
         } else {
             print("   ✓ No Dock plist entry to remove — Dock not restarted")
             DiagnosticsLog.shared.log("dock", "removeFromDock for \(config.diagnosticName): no plist entry — Dock NOT restarted")
@@ -1668,22 +1639,23 @@ final class HelperBundleManager {
 
         // Filter out apps - check by bundle-identifier in tile-data first, then fallback to Info.plist
         let filteredApps = currentApps.filter { entry in
+            // The bundle-identifier stored in tile-data comes FIRST, before the URL is parsed: an
+            // entry whose URL can't be parsed is still this tile's (the shared predicate counts it
+            // as a stale entry), so an "expect absent" retry must be able to remove it.
+            if let storedBundleId = (entry["tile-data"] as? [String: Any])?["bundle-identifier"] as? String,
+               storedBundleId == bundleId {
+                print("   Found by tile-data bundle-identifier: \(Self.dockEntryPath(entry) ?? "<unparseable>")")
+                return false  // Remove this entry
+            }
+
             guard let tileData = entry["tile-data"] as? [String: Any],
                   let fileData = tileData["file-data"] as? [String: Any],
                   let urlString = fileData["_CFURLString"] as? String,
                   let url = URL(string: urlString) else {
-                return true  // Keep entries we can't parse
+                return true  // Keep other entries we can't parse
             }
 
             let appPath = "/" + url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-
-            // First check the bundle-identifier stored directly in tile-data
-            // This is the most reliable method as it doesn't depend on the app bundle existing
-            if let storedBundleId = tileData["bundle-identifier"] as? String,
-               storedBundleId == bundleId {
-                print("   Found by tile-data bundle-identifier: \(appPath)")
-                return false  // Remove this entry
-            }
 
             // Fallback: Try to read bundle ID from Info.plist
             let infoPlistPath = URL(fileURLWithPath: appPath)
@@ -1986,48 +1958,180 @@ final class HelperBundleManager {
         NotificationCenter.default.post(name: .dockDidRestart, object: nil)
     }
 
-    /// Quit the Dock and block until the process has actually exited, then let launchd bring it
-    /// back (the same lifecycle `restartDock()` relies on).
-    ///
-    /// WHY (critical): `killall Dock` only *signals* the Dock. A Dock that still holds the previous
-    /// `persistent-apps` in memory writes that stale list back to cfprefsd as it shuts down, which
-    /// can silently undo a removal we just wrote — the "STILL in Dock after restart" line. Writing
-    /// only after the process is gone leaves nothing behind to flush on top of us. Measured on
-    /// 2026-08-29: plain write-then-`killall` removals stranded 7 entries that a single
-    /// quit-then-write pass cleaned up. Used only on the retry path, so the common case is
-    /// unchanged.
-    private func quitDockAndWaitForExit(timeout: TimeInterval = 3) {
-        restartDock()  // posts .dockDidRestart for Dock Lock
+    // MARK: - Verified Dock restart (2.6.2)
+    //
+    // Every Dock change goes through `restartDockAndVerify`: SIGKILL restart, wait for the new
+    // Dock + 1 s, check each tile's entry with the shared predicate (`dockEntriesAreCurrent`),
+    // retry once, never loop. It reads the plist, so it can't see the plist and the running Dock
+    // disagree, and the +1 s read can come before the new Dock's own write-back (a few seconds
+    // after launch) — accepted: that write-back carries the list it loaded, which is ours.
 
-        let deadline = Date().addingTimeInterval(timeout)
-        while Date() < deadline {
-            if NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.dock").isEmpty {
-                print("   ✓ Dock process exited")
-                return
-            }
-            usleep(10_000)  // 10ms
-        }
-        print("   ⚠️ Dock still running after \(timeout)s — proceeding anyway")
+    /// What one tile's Dock entry must look like after a restart. `path == nil` = no entry at all;
+    /// `index` is where a missing entry is re-added; `name` is the `diagnosticName`, for logs.
+    struct DockExpectation: Equatable, Sendable {
+        let bundleId: String
+        let path: String?
+        let index: Int?
+        let name: String
     }
 
-    /// Wait for Dock to fully restart and plist to update after tile removal
-    /// Polls CFPreferences to ensure the tile is actually gone before proceeding
-    private func waitForTileRemoval(bundleId: String, maxAttempts: Int = 30) async throws {
-        print("   ⏳ Waiting for Dock plist to update...")
+    /// The expectations NOT met by `apps`, in input order. Absent: no entry with the bundle id.
+    /// Present: the shared predicate (`dockEntriesAreCurrent`).
+    nonisolated static func unmetExpectations(_ expectations: [DockExpectation], in apps: [[String: Any]],
+                                              sameFile: (String, String) -> Bool) -> [DockExpectation] {
+        expectations.filter { expectation in
+            let paths = dockEntryPaths(bundleId: expectation.bundleId, in: apps)
+            guard let path = expectation.path else { return !paths.isEmpty }
+            return !dockEntriesAreCurrent(paths, helperPath: path, sameFile: sameFile)
+        }
+    }
 
-        for attempt in 1...maxAttempts {
-            // Re-read from CFPreferences to get fresh state
-            if findInDock(bundleId: bundleId) == nil {
-                print("   ✓ Dock plist updated (verified after \(attempt) checks)")
-                return
+    /// A batch expects presence only for tiles that were pinned BEFORE it (keys of
+    /// `pinnedIndices`, read before the re-seat), never for one the user dragged off: Popover Apply
+    /// rebuilds `isVisibleInDock && helperExists` tiles, and expecting one of those would make the
+    /// retry re-pin it.
+    nonisolated static func batchExpectations(_ tiles: [(bundleId: String, path: String, name: String)],
+                                              pinnedIndices: [String: Int]) -> [DockExpectation] {
+        tiles.compactMap { tile in
+            guard let index = pinnedIndices[tile.bundleId] else { return nil }
+            return DockExpectation(bundleId: tile.bundleId, path: tile.path, index: index, name: tile.name)
+        }
+    }
+
+    /// The unmet expectations a retry may act on: every one whose tile another of our operations
+    /// is building or removing right now is left to that operation (Q16/Q18) — a batch's retry
+    /// would otherwise re-pin a tile the user is hiding, or remove one the user is adding. `owned`
+    /// keeps the caller's own tile, which it holds in `buildingBundleIds` / `removingBundleIds`.
+    nonisolated static func retryableExpectations(_ unmet: [DockExpectation], busy: Set<String>,
+                                                  owned: Set<String>) -> [DockExpectation] {
+        unmet.filter { !busy.contains($0.bundleId) || owned.contains($0.bundleId) }
+    }
+
+    /// Per-tile verification counts. A count, not a set: two verifications can overlap on one
+    /// tile, and with a set the first to finish would clear it while the second still checks it.
+    nonisolated static func incrementingCounts(_ counts: [String: Int], for ids: [String]) -> [String: Int] {
+        var result = counts
+        for id in ids { result[id, default: 0] += 1 }
+        return result
+    }
+
+    /// The inverse of `incrementingCounts`; a key that reaches 0 is dropped.
+    nonisolated static func decrementingCounts(_ counts: [String: Int], for ids: [String]) -> [String: Int] {
+        var result = counts
+        for id in ids {
+            let remaining = (result[id] ?? 0) - 1
+            result[id] = remaining > 0 ? remaining : nil
+        }
+        return result
+    }
+
+    /// Restart, check, retry the unmet ones once, check those again. Everything external is
+    /// injected so the control flow ("retry once, never loop", "leave busy tiles alone") is
+    /// unit-tested (`DockExpectationTests`). Returns whether every expectation it owns is met.
+    static func runDockVerification(_ expectations: [DockExpectation], ownedBundleIds: Set<String>,
+                                    restartAndWait: () async -> Void, readApps: () -> [[String: Any]],
+                                    busy: () -> Set<String>, applyFix: (DockExpectation) -> Void,
+                                    sameFile: (String, String) -> Bool) async -> Bool {
+        func leavingBusyTiles(_ unmet: [DockExpectation]) -> [DockExpectation] {
+            let retryable = retryableExpectations(unmet, busy: busy(), owned: ownedBundleIds)
+            for dropped in unmet where !retryable.contains(dropped) {
+                DiagnosticsLog.shared.log("dock", "\(dropped.name) has another Dock operation in flight — leaving it to that operation")
             }
-
-            // Wait 100ms between checks (total max wait: 3 seconds)
-            try await Task.sleep(nanoseconds: 100_000_000)
+            return retryable
         }
 
-        // If we get here, tile is still in plist after max wait
-        print("   ⚠️ Tile still in plist after \(maxAttempts) checks (3s)")
+        await restartAndWait()
+        let firstApps = readApps()
+        let toRetry = leavingBusyTiles(unmetExpectations(expectations, in: firstApps, sameFile: sameFile))
+        guard !toRetry.isEmpty else { return true }
+
+        // No `await` between the busy check above and these fixes, so a Hide can't start in between.
+        for expectation in toRetry {
+            let found = dockEntryPaths(bundleId: expectation.bundleId, in: firstApps).map { $0 ?? "<unparseable>" }
+            DiagnosticsLog.shared.log("dock", "\(expectation.name) not at its expected Dock path after restart (found: \(found)) — retrying")
+            applyFix(expectation)
+        }
+
+        // Re-check ONLY what was retried: a tile dropped as busy belongs to its own operation, and
+        // re-checking it after that operation finished would report a false STILL.
+        await restartAndWait()
+        let stillUnmet = leavingBusyTiles(unmetExpectations(toRetry, in: readApps(), sameFile: sameFile))
+        for expectation in stillUnmet {
+            DiagnosticsLog.shared.log("dock", "\(expectation.name) STILL not at its expected Dock path after retry")
+        }
+        if stillUnmet.isEmpty {
+            DiagnosticsLog.shared.log("dock", "\(toRetry.map(\.name).joined(separator: ", ")) verified on retry")
+        }
+        return stillUnmet.isEmpty
+    }
+
+    /// The bundle ids a verification is checking right now (read by the Dock-plist watcher, which
+    /// skips them — Q12).
+    var verifyingBundleIds: Set<String> { Set(verifyingCounts.keys) }
+
+    /// Restart the Dock and verify `expectations`, retrying once (`runDockVerification`). Runs in
+    /// an unstructured task on purpose: once the Dock is killed the verification must finish, and a
+    /// cancelled caller (the main window's `.task`, closed mid-batch) would otherwise turn every
+    /// `Task.sleep` into an instant return and the PID poll into a spin.
+    func restartDockAndVerify(_ expectations: [DockExpectation], ownedBundleIds: Set<String>) async -> Bool {
+        let ids = expectations.map(\.bundleId)
+        verifyingCounts = Self.incrementingCounts(verifyingCounts, for: ids)
+        defer { verifyingCounts = Self.decrementingCounts(verifyingCounts, for: ids) }
+
+        return await Task { @MainActor in
+            await Self.runDockVerification(
+                expectations, ownedBundleIds: ownedBundleIds,
+                restartAndWait: { await self.restartDockAndWaitForNewDock() },
+                readApps: { self.readPersistentApps() },
+                busy: { self.buildingBundleIds.union(self.removingBundleIds) },
+                applyFix: { expectation in
+                    if let path = expectation.path {
+                        self.addToDock(at: URL(fileURLWithPath: path), atIndex: expectation.index)
+                    } else {
+                        self.removeFromDockPlist(bundleId: expectation.bundleId)
+                    }
+                },
+                sameFile: Self.isSameFile)
+        }.value
+    }
+
+    /// SIGKILL the Dock, wait up to 5 s for a Dock with a NEW pid (the killed one can still be
+    /// listed for a moment), then 1 s more. Assumes `NSRunningApplication` updates while the main
+    /// actor is suspended in `Task.sleep`; a "no new Dock within 5 s" line on every restart would
+    /// mean it doesn't.
+    private func restartDockAndWaitForNewDock() async {
+        let oldPID = Self.runningDockPID(other: nil)
+        restartDock()
+        var newPID: pid_t?
+        let deadline = Date().addingTimeInterval(5)
+        while Date() < deadline {
+            if let pid = Self.runningDockPID(other: oldPID) {
+                newPID = pid
+                break
+            }
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
+        let oldLabel = oldPID.map(String.init) ?? "none"
+        if let newPID {
+            DiagnosticsLog.shared.log("dock", "Dock restarted (pid \(oldLabel) → \(newPID))", verbose: true)
+        } else {
+            DiagnosticsLog.shared.log("dock", "no new Dock within 5 s (pid \(oldLabel))")
+        }
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
+    }
+
+    /// The pid of a live Dock other than `other` (nil = any live Dock).
+    private static func runningDockPID(other: pid_t?) -> pid_t? {
+        NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.dock")
+            .first { !$0.isTerminated && $0.processIdentifier != other }?
+            .processIdentifier
+    }
+
+    /// `persistent-apps`, synchronized first (another app's domain can read stale otherwise).
+    private func readPersistentApps() -> [[String: Any]] {
+        let dockAppId = "com.apple.dock" as CFString
+        CFPreferencesAppSynchronize(dockAppId)
+        return CFPreferencesCopyAppValue("persistent-apps" as CFString, dockAppId) as? [[String: Any]] ?? []
     }
 
     // MARK: - Migration Support API
@@ -2101,11 +2205,6 @@ final class HelperBundleManager {
         }
     }
 
-    /// Restart Dock (public for migration batch use)
-    func performDockRestart() {
-        restartDock()
-    }
-
     // MARK: - Helpers
 
     /// Sanitize app name for use as bundle name (replace special chars)
@@ -2133,6 +2232,9 @@ enum HelperBundleError: Error, LocalizedError {
     /// Another bundle build (install or regenerate) already owns this bundle id, so this one was
     /// refused rather than allowed to interleave — see `HelperBundleManager.canBeginBundleBuild`.
     case bundleBuildInProgress
+    /// The Dock change was written, but after the restart and one retry the Dock still did not
+    /// have it (`HelperBundleManager.restartDockAndVerify`).
+    case dockChangeNotKept
 
     var errorDescription: String? {
         switch self {
@@ -2150,6 +2252,8 @@ enum HelperBundleError: Error, LocalizedError {
             return AppStrings.Error.appTranslocated
         case .bundleBuildInProgress:
             return AppStrings.Error.bundleBuildInProgress
+        case .dockChangeNotKept:
+            return AppStrings.Error.dockChangeNotKept
         }
     }
 }

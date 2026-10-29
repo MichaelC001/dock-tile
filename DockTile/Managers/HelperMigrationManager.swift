@@ -247,16 +247,24 @@ final class HelperMigrationManager {
         // mechanism installHelper uses, batched here into the single restart below. Without this the
         // new icons regenerate on disk but the Dock keeps showing the old render until the tile is
         // manually re-configured.
+        // Which tiles are pinned is read BEFORE the re-seat: only those may be expected present
+        // afterwards (a tile the user dragged off must not be re-pinned by the retry).
+        var pinnedIndices: [String: Int] = [:]
+        for config in regeneratedConfigs {
+            if let index = helperManager.findDockIndex(bundleId: config.bundleIdentifier) {
+                pinnedIndices[config.bundleIdentifier] = index
+            }
+        }
         for config in regeneratedConfigs {
             helperManager.refreshDockEntry(for: config)
         }
 
-        // Single Dock restart for the whole batch
+        // Single verified Dock restart for the whole batch; a failure is logged inside.
         print("[Migration] Restarting Dock for \(regeneratedConfigs.count) updated helper(s)")
-        helperManager.performDockRestart()
-
-        // Wait for Dock to stabilize
-        try? await Task.sleep(nanoseconds: 1_000_000_000)
+        let expectations = HelperBundleManager.batchExpectations(
+            regeneratedConfigs.map { (bundleId: $0.bundleIdentifier, path: helperManager.helperPath(for: $0).path, name: $0.diagnosticName) },
+            pinnedIndices: pinnedIndices)
+        _ = await helperManager.restartDockAndVerify(expectations, ownedBundleIds: [])
 
         // Relaunch regenerated helpers
         for config in regeneratedConfigs {
