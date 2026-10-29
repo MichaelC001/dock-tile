@@ -70,6 +70,10 @@ script phases), fix on top of the contributor's commit, push the branch to origi
 `xcrun xcresulttool get test-results tests --path TestResults.xcresult | grep "Expectation failed"`.
 Swift Testing's issue text is ONLY in the xcresult (xcpretty and the raw log carry just "failed on"),
 and its per-test durations there are suite wall time, not the test's own.
+Two false alarms from 2026-10-28: a `gh run watch` that exits 1 may be a LOCAL network error
+("can't assign requested address") with the run still going — read `gh run view` first; and a
+re-run of an older `main` run shows "cancelled" when a newer push lands, because `ci.yml` uses
+`cancel-in-progress` per ref — only the newest commit's run counts.
 
 **Dock render check (on demand):** `gh workflow run ci.yml --ref <branch> -f dock_check=true`
 adds `dock-check-macos-15`, which bakes legacy tiles with the real generator on the macOS 15
