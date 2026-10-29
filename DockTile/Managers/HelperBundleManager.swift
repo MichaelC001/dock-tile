@@ -1880,18 +1880,34 @@ final class HelperBundleManager {
         }
     }
 
-    /// Restart Dock to apply plist changes
+    /// `killall` arguments for every Dock restart: SIGKILL, so the dying Dock cannot save its
+    /// stale persistent-apps over the write we just made (SIGTERM lost 14/14 writes within 2.5 s
+    /// of a restart, SIGKILL kept 13/13 — docs/dock-modification-prior-art.md §6). launchd
+    /// relaunches the Dock either way (proven on macOS 15 and 26 by the `dock-kill-check` CI job).
+    nonisolated static let dockRestartArguments = ["-KILL", "Dock"]
+
+    /// Restart Dock to apply plist changes. Sends SIGKILL (see `dockRestartArguments`); the accepted
+    /// cost is that a Dock edit the Dock hasn't saved yet (an icon dragged a moment ago) is lost.
     private func restartDock() {
         print("   🔄 Restarting Dock...")
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
-        process.arguments = ["Dock"]
+        process.arguments = Self.dockRestartArguments
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
 
-        try? process.run()
-        process.waitUntilExit()
-        print("   ✓ Dock restarted")
+        do {
+            try process.run()
+            process.waitUntilExit()
+            if process.terminationStatus == 0 {
+                print("   ✓ Dock restarted")
+            } else {
+                // killall exits 1 when no Dock process matched.
+                DiagnosticsLog.shared.log("dock", "Dock restart: killall exited \(process.terminationStatus) (no Dock running?)")
+            }
+        } catch {
+            DiagnosticsLog.shared.log("dock", "Dock restart FAILED: could not run killall — \(error.localizedDescription)")
+        }
 
         // Let Dock Lock re-assert the anchor: a relaunched Dock can come back on a different
         // display, and the clamp only prevents drift — it doesn't relocate. Posted on the main

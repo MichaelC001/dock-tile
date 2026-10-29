@@ -118,11 +118,18 @@ All Dock plist operations use `CFPreferencesCopyAppValue`/`CFPreferencesSetAppVa
 
 Race condition prevention: `installingBundleIds` and `removingBundleIds` Sets prevent double operations.
 
-**The dying Dock can undo your write (critical)**: `killall Dock` only *signals* the Dock — a Dock
-still holding the previous `persistent-apps` in memory flushes that stale list back to cfprefsd as it
-exits, silently reverting the add or removal just written (this is the `'<tile>' STILL in Dock after
-restart` line, and the "had to press hide twice" symptom). Distinct from the stale-*read* problem the
-synchronize-first reads defend against. So every Dock mutation must **verify** afterwards rather than
+**The dying Dock can undo your write (critical)**: a plain `killall Dock` (SIGTERM) only *signals* the
+Dock — a Dock still holding the previous `persistent-apps` in memory flushes that stale list back to
+cfprefsd as it exits, silently reverting the add or removal just written (this is the `'<tile>' STILL
+in Dock after restart` line, and the "had to press hide twice" symptom). Distinct from the stale-*read*
+problem the synchronize-first reads defend against. **So every restart is write-then-SIGKILL**
+(`HelperBundleManager.dockRestartArguments`, 2.6.2): a killed Dock cannot flush. Measured 2026-10-29
+(docs/dock-modification-prior-art.md §6, macOS 27): write-then-SIGTERM lost 14/14 writes made within
+2.5 s of a restart; write-then-SIGKILL kept 13/13. Kill-then-write is NOT the same: launchd can relaunch
+the Dock before the write lands and the plist and the running Dock then disagree. It depends on launchd
+relaunching a killed Dock (KeepAlive), proven on macOS 15 and 26 by the `dock-kill-check` CI job
+(ci-release.md) and on macOS 27 by §6. **Accepted cost:** a Dock edit the Dock hasn't saved yet (an icon
+dragged a second before an Update) is lost. Every Dock mutation must still **verify** afterwards rather than
 assume it stuck: `installHelper` re-adds + restarts if `findInDock` misses, and `removeFromDock(for:)`
 retries via `quitDockAndWaitForExit()` — re-writing with the Dock process actually gone, so nothing
 is left alive to flush over us. Measured 2026-08-29: plain write-then-`killall` stranded 7 entries
