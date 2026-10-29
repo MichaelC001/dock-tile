@@ -26,21 +26,22 @@ let appsKey = "persistent-apps" as CFString
 let stubID = "com.docktile.ci.killcheck"
 
 @discardableResult
-func run(_ exe: String, _ args: [String]) -> (status: Int32, out: String) {
+func run(_ exe: String, _ args: [String], passStderr: Bool = false) -> (status: Int32, out: String) {
     let p = Process()
     p.executableURL = URL(fileURLWithPath: exe)
     p.arguments = args
     let pipe = Pipe()
     p.standardOutput = pipe
-    p.standardError = FileHandle.nullDevice
+    p.standardError = passStderr ? FileHandle.standardError : FileHandle.nullDevice
     do { try p.run() } catch { return (-1, "") }
     let data = pipe.fileHandleForReading.readDataToEndOfFile()
     p.waitUntilExit()
     return (p.terminationStatus, String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines))
 }
 
+/// This user's Dock only: another session's Dock on the runner must not read as a relaunch.
 func dockPID() -> Int32? {
-    Int32(run("/usr/bin/pgrep", ["-x", "Dock"]).out.split(separator: "\n").first ?? "")
+    Int32(run("/usr/bin/pgrep", ["-x", "-U", "\(getuid())", "Dock"]).out.split(separator: "\n").first ?? "")
 }
 
 /// Any Dock whose PID differs from `old` (nil: any Dock at all), within `timeout` seconds.
@@ -103,9 +104,11 @@ func withStub(_ present: Bool) -> [[String: Any]] {
     return present ? others + [stubEntry()] : others
 }
 
-/// App-icon count of the running Dock, or nil when it can't be measured.
+/// App-icon count of the running Dock, or nil when it can't be measured. The measurer's stderr
+/// (its reason, e.g. "INCONCLUSIVE: no Dock window found") goes to the log, so an "unavailable"
+/// capture says why.
 func capturedCount(_ name: String) -> Int? {
-    let r = run("/usr/bin/swift", [measure, work.appendingPathComponent(name).path, "--count-only"])
+    let r = run("/usr/bin/swift", [measure, work.appendingPathComponent(name).path, "--count-only"], passStderr: true)
     return r.status == 0 ? Int(r.out) : nil
 }
 

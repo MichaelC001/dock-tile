@@ -414,6 +414,9 @@ jobs:
       matrix:
         os: [macos-15, macos-26]
     runs-on: ${{ matrix.os }}
+    # Every child call reads its pipe to EOF with no timeout; a hung capture (e.g. a TCC prompt on
+    # macos-26) must not hold a runner for the 6 h default. A full run should take a few minutes.
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
