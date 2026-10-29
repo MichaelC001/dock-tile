@@ -7,10 +7,10 @@
 // developer Mac — it exists for the throwaway runners of the `dock-kill-check` job in ci.yml.
 //
 // Usage: swift Scripts/ci/dock-kill-check.swift <workdir>
-//   <workdir>/trial-N.png, <workdir>/control.png, <workdir>/baseline.png — Dock captures
+//   <workdir>/trial-N.png, <workdir>/control-N.png, <workdir>/baseline.png — Dock captures
 // Exit: 0 only when all six counted trials pass · 1 on any miss (a capture that can't be made
 //       counts as a miss: a check that cannot measure must not pass) · 2 usage / not on CI
-import Foundation
+import AppKit
 
 guard ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] != nil else {
     print("refusing to rewrite a non-CI Dock"); exit(2)
@@ -89,9 +89,28 @@ try FileManager.default.createDirectory(at: stub.appendingPathComponent("Content
 try "#!/bin/sh\nexec /bin/sleep 1\n".write(to: stub.appendingPathComponent("Contents/MacOS/stub"), atomically: true, encoding: .utf8)
 _ = run("/bin/chmod", ["+x", stub.appendingPathComponent("Contents/MacOS/stub").path])
 let plist: [String: Any] = ["CFBundleName": "KillCheck", "CFBundleIdentifier": stubID, "CFBundlePackageType": "APPL",
-                            "CFBundleExecutable": "stub", "LSUIElement": true]
+                            "CFBundleExecutable": "stub", "CFBundleIconFile": "AppIcon", "LSUIElement": true]
 try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
     .write(to: stub.appendingPathComponent("Contents/Info.plist"))
+
+// A saturated icon. Without one the Dock draws the generic app icon, which on macOS 15 is
+// near-white on the bar, and the measurer (columns that differ from the bar) cannot see it: the
+// first CI run counted 18 icons with the stub plainly pinned (2026-10-29).
+let resources = stub.appendingPathComponent("Contents/Resources", isDirectory: true)
+try FileManager.default.createDirectory(at: resources, withIntermediateDirectories: true)
+let iconPNG = work.appendingPathComponent("KillCheck-icon.png")
+let iconRep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 512, pixelsHigh: 512, bitsPerSample: 8,
+                               samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
+                               bytesPerRow: 0, bitsPerPixel: 0)!
+NSGraphicsContext.saveGraphicsState()
+NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: iconRep)
+NSColor(srgbRed: 0.9, green: 0.15, blue: 0.15, alpha: 1).setFill()
+NSBezierPath(roundedRect: NSRect(x: 50, y: 50, width: 412, height: 412), xRadius: 92, yRadius: 92).fill()
+NSGraphicsContext.restoreGraphicsState()
+try iconRep.representation(using: .png, properties: [:])!.write(to: iconPNG)
+guard run("/usr/bin/sips", ["-s", "format", "icns", iconPNG.path, "--out", resources.appendingPathComponent("AppIcon.icns").path]).status == 0 else {
+    print("dock-kill-check: could not make the stub icon — the Dock capture could not see the stub, failing"); exit(1)
+}
 
 func stubEntry() -> [String: Any] {
     ["GUID": Int.random(in: 1...Int(Int32.max)), "tile-type": "file-tile",
@@ -140,12 +159,12 @@ guard let baseline = capturedCount("baseline.png") else {
 }
 print("app icons at baseline: \(baseline)")
 
-/// One trial: restart the Dock (standing in for the launch migration's restart), wait `gap`,
-/// write the stub present/absent, restart the Dock with `signal`, then check plist and Dock.
+/// One trial: restart the Dock with `prior` (standing in for the launch migration's restart), wait
+/// `gap`, write the stub present/absent, restart the Dock with `signal`, then check plist and Dock.
 struct Outcome { let plistOK: Bool; let capture: String; let pids: String }
-func trial(_ label: String, gap: Double, writePresent: Bool, expectPresent: Bool, signal: DockSignal) -> Outcome {
+func trial(_ label: String, gap: Double, writePresent: Bool, expectPresent: Bool, prior: DockSignal, signal: DockSignal) -> Outcome {
     let before = dockPID()
-    restartDock(.kill)
+    restartDock(prior)
     guard let fresh = waitForNewDock(old: before) else { return Outcome(plistOK: false, capture: "FAIL", pids: "no Dock after the prior restart") }
     usleep(UInt32(gap * 1_000_000))
     writeApps(withStub(writePresent))
@@ -177,18 +196,26 @@ let trials: [(gap: Double, add: Bool, expectPresent: Bool)] = [
 var passed = 0
 for (i, t) in trials.enumerated() {
     let n = i + 1
-    let o = trial("trial-\(n)", gap: t.gap, writePresent: t.add, expectPresent: t.expectPresent, signal: .kill)
+    let o = trial("trial-\(n)", gap: t.gap, writePresent: t.add, expectPresent: t.expectPresent, prior: .kill, signal: .kill)
     let ok = o.plistOK && o.capture == "ok"
     if ok { passed += 1 }
     print("trial \(n) (gap \(t.gap) s, \(t.add ? "add" : "remove")): plist: \(o.plistOK ? "ok" : "FAIL") capture: \(o.capture) \(o.pids) \(ok ? "OK" : "FAIL")")
     fflush(stdout)
 }
 
-// Control, reported but not counted: the same race with SIGTERM, which §6 lost 14/14 on macOS 27.
-let control = trial("control", gap: 0.5, writePresent: true, expectPresent: true, signal: .term)
-let kept = control.plistOK && control.capture == "ok"
-print("control (SIGTERM at 0.5 s): \(kept ? "kept" : "lost") — plist: \(control.plistOK ? "ok" : "FAIL") capture: \(control.capture) \(control.pids)")
-if kept { print("NOTE: this runner did not reproduce the race; the SIGKILL passes prove only that the Dock relaunches with our write") }
+// Control, reported but not counted: §6's arm A exactly (a SIGTERM restart, then write, then
+// SIGTERM), which lost 14/14 writes within 2.5 s on macOS 27. Three runs, add / remove / add.
+let controls: [(gap: Double, add: Bool)] = [(0.5, true), (0.5, false), (2.5, true)]
+var lost = 0
+for (i, c) in controls.enumerated() {
+    let o = trial("control-\(i + 1)", gap: c.gap, writePresent: c.add, expectPresent: c.add, prior: .term, signal: .term)
+    let kept = o.plistOK && o.capture == "ok"
+    if !kept { lost += 1 }
+    print("control \(i + 1) (SIGTERM, gap \(c.gap) s, \(c.add ? "add" : "remove")): \(kept ? "kept" : "lost") — plist: \(o.plistOK ? "ok" : "FAIL") capture: \(o.capture) \(o.pids)")
+    fflush(stdout)
+}
+print("control (SIGTERM, §6 arm A): lost \(lost)/\(controls.count)")
+if lost == 0 { print("NOTE: this runner did not reproduce the race; the SIGKILL passes prove only that the Dock relaunches with our write") }
 
 // Cleanup: the stub out of the Dock (write, then SIGKILL).
 writeApps(withStub(false))

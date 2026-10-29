@@ -91,8 +91,10 @@ launchd relaunches the Dock and the killed Dock cannot flush its stale list over
 14/14 such writes in the 2026-10-29 experiment, docs/dock-modification-prior-art.md §6). Six
 trials (0.5 / 2.5 / 10 s after a prior restart, add then remove) each require a new Dock PID, the
 stub entry in the plist by `bundle-identifier`, and the running Dock's icon count via
-`dock-measure.swift --count-only`; an uncounted SIGTERM control reports `lost` (the runner
-reproduces the race) or `kept` (it does not, so the passes prove only the relaunch). Verdict =
+`dock-measure.swift --count-only` (the stub carries a saturated red icon: the generic app icon is
+near-white on macOS 15 and the measurer could not see it). Three uncounted SIGTERM controls,
+§6's arm A exactly, report `lost N/3`: lost means the runner reproduces the race; 0/3 means it
+does not, so the passes prove only the relaunch. Verdict =
 the `dock-kill-check: N/6 OK` line in `log.txt`; a capture that can't be made reads
 `capture: unavailable` and fails the job. `Scripts/ci/dock-kill-check.swift` rewrites the
 runner's Dock and refuses to run off CI. Re-run it on each new runner image or macOS release.
