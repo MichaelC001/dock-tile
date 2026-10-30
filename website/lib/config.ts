@@ -6,9 +6,9 @@ export const siteConfig = {
   contactEmail: "support.docktile@rkarthik.co",
 
   // Download Links
-  downloadUrl: "https://github.com/k97/dock-tile/releases/download/v2.6.1/DockTile-2.6.1.dmg",
-  releaseNotesUrl: "https://github.com/k97/dock-tile/releases/tag/v2.6.1",
-  latestVersion: "2.6.1",
+  downloadUrl: "https://github.com/k97/dock-tile/releases/download/v2.6.2/DockTile-2.6.2.dmg",
+  releaseNotesUrl: "https://github.com/k97/dock-tile/releases/tag/v2.6.2",
+  latestVersion: "2.6.2",
 
   // Social & External Links
   githubUrl: "https://github.com/k97/dock-tile",
