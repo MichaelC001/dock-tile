@@ -1977,7 +1977,9 @@ final class HelperBundleManager {
     // Dock + 1 s, check each tile's entry with the shared predicate (`dockEntriesAreCurrent`),
     // retry once, never loop. It reads the plist, so it can't see the plist and the running Dock
     // disagree, and the +1 s read can come before the new Dock's own write-back (a few seconds
-    // after launch) — accepted: that write-back carries the list it loaded, which is ours.
+    // after launch). Accepted, but NOT because that write-back is always ours: on macOS 27 the
+    // Dock re-resolves a pinned entry's path through Launch Services when it loads (issue #35), so
+    // a stale LS registration can rewrite the entry after this check passed.
 
     /// What one tile's Dock entry must look like after a restart. `path == nil` = no entry at all;
     /// `index` is where a missing entry is re-added; `name` is the `diagnosticName`, for logs.
