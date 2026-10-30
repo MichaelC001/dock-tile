@@ -17,7 +17,10 @@
     `SUFeedURL` has to be flipped back **in a release**, and docktile.app kept attached for the
     builds that shipped with it.
 - Machine-read URLs (the appcast) **never carry UTM parameters**; the app's human-facing links
-  (About → Website, the studio links) carry `utm_source=docktile-mac`.
+  (About → Website, the studio links) carry `utm_source=docktile-mac`. The **website's** links to
+  the studio and its apps go through `withReferral()` (`lib/referral.ts`:
+  `utm_source=docktile.app&utm_medium=referral`, the convention happymachines.company uses);
+  GitHub, mailto and JSON-LD URLs never carry it.
 - **Host redirects belong to Vercel, never next.config/middleware** — an app-level host redirect
   fights the platform's and loops.
 
@@ -41,7 +44,8 @@
   `downloadUrl` track the CI-written config automatically.
 - **No `aggregateRating`** without verifiable on-page review data (rich-results penalty).
   FAQPage stays on `/faq` only — Google requires the marked-up content visible on that page.
-- Person publisher + `sameAs` GitHub disambiguates the app from Apple's `NSDockTile` API.
+- Author/publisher is the **Organization** Happy Machines Company (2026-10-30; was a Person). The
+  app's `sameAs` GitHub repo is what disambiguates it from Apple's `NSDockTile` API — keep it.
 
 ## Crawlability (critical)
 

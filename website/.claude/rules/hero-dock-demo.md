@@ -82,6 +82,35 @@ the demo's popover rendering changes. **Illustrative macOS components never rest
 stretch, squish, stack, or swap sizes per breakpoint; hand-drawn "roomy-ish" approximations were
 rejected twice before this.
 
+## Closing Dock (`closing-band.tsx` + `closing-dock.tsx`, 2026-10-30)
+
+The homepage ends on a second Dock: GitHub · What's new · Contact | Studio. It reuses the hero's
+pieces rather than copying them — keep it that way:
+
+- **Shared**: `MacOSDock` (same size + magnification), `anchorPopover` (`lib/dock-popover.ts` —
+  the one home of the popover anchor maths; the hero calls it too) and `TileFace` /
+  `ICON_CONTENT_RATIO` (exported from `dock-demo.tsx`).
+- **`MacOSDock` optional props** (the hero passes none, so it renders exactly as before):
+  `href` (real `<a>` — crawlable, native Enter; a link Dock drops the container's
+  `role="button"`), `external` + `externalHint` (new tab; the hint is in `aria-label`, because
+  aria-label overrides child text), `tooltip` (node, for the ↗), `label` (touch-only caption;
+  a labelled Dock widens its spacing where there is no hover), `kind: "divider"` (never
+  magnified; all layout maths is cumulative, which equals the old index formula without one).
+- **The Studio popover's markup is a deliberate copy** of the hero's list popover, like the
+  bento clone — keep them in sync. It renders AFTER the Dock in the DOM (Tab flows into it;
+  a keyboard open focuses its first link). The band clips only its background layers, never
+  the section, so the popover can't be cut off near the band's edge.
+- **Studio face** = the App Grid 2×2 (HMC mark, Dock Tile, Spades Audio, Lango) on
+  `public/assets/studio/*.png`, all normalised to 232/256 content. Its cells sit on definite
+  `1fr` grid tracks: a %-sized SVG in an auto-height cell blew the cell up in the mockup.
+- Pass `apps` memoised — `MacOSDock` resets its layout whenever the array identity changes.
+- **macOS 26 tile look (owner, 2026-10-30)**: the closing Dock's glyph tiles pass `TileFace`'s
+  optional `glyphSize="70%"` (the GitHub/fire/mail SVGs carry ~2/24 padding, so 58% read
+  small) and `shaded` (top→bottom glyph fall-off, as the app bakes). GitHub sits on the app's
+  Mono plate (`#FFFFFF → #EFEFF1`, `glyphColor="#1f2328"`). The hero's tiles pass `shaded` too
+  (owner: "on both the hero and the footer dock"), but keep the 58% glyph size — their
+  Bootstrap glyphs carry no padding.
+
 ## App-icon assets (`public/assets/app-icons/`)
 
 - Real icons extracted from installed apps (Swift `NSWorkspace` script → 128px PNG; `sips` for
@@ -101,5 +130,9 @@ rejected twice before this.
 ## Tile glyphs (`tile-glyph.tsx`)
 
 Filled Bootstrap Icons (MIT) matching each tile's real SF Symbol — outline glyphs read "comicky"
-and un-Mac. One shared set for every designed icon on the site (hero dock, Smart Add, presets).
-Multi-path or non-16×16 glyphs go in `GLYPH_DEFS` (e.g. the two-bubble chat symbol).
+and un-Mac. One shared set for every designed icon on the site (hero dock, closing dock, Smart
+Add, presets). Multi-path or non-16×16 glyphs go in `GLYPH_DEFS` (e.g. the two-bubble chat
+symbol). **Exceptions:** `fire` ("What's new") and `mail` (Contact, on blue — a filled
+envelope read as Apple Mail) in the closing Dock are Hugeicons stroke-rounded outlines,
+chosen by the owner on 2026-10-30 — `GLYPH_DEFS` entries may set `stroke` (outline) or
+`fillRule: "evenodd"` (the GitHub mark).

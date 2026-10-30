@@ -28,13 +28,14 @@ export function TermsContent() {
       <LegalHeading>Disclaimer of Warranties</LegalHeading>
       <p className="leading-relaxed text-muted-foreground">
         {siteConfig.appName} is provided &quot;as is&quot; without
-        warranty of any kind, express or implied. The developer does not
-        warrant that the software will be error-free or uninterrupted.
+        warranty of any kind, express or implied. {siteConfig.authorName}{" "}
+        does not warrant that the software will be error-free or
+        uninterrupted.
       </p>
 
       <LegalHeading>Limitation of Liability</LegalHeading>
       <p className="leading-relaxed text-muted-foreground">
-        In no event shall the developer be liable for any damages arising
+        In no event shall {siteConfig.authorName} be liable for any damages arising
         out of the use or inability to use {siteConfig.appName}, including
         but not limited to direct, indirect, incidental, or consequential
         damages.

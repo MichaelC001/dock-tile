@@ -241,8 +241,11 @@
 .tile-face {
   background: var(--tile-bg);
 }
+/* Dark plate sampled from macOS 26's own Dark-style render (Mail.app,
+   2026-10-30): ~#222 at the top falling to ~#0f0f0f at the bottom. The real
+   Dock Tile helpers get this from the system's glass pass. */
 .dark .tile-face {
-  background: linear-gradient(to bottom, #3a3a3c, #1c1c1e);
+  background: linear-gradient(to bottom, #232323, #0f0f10);
 }
 
 /* macOS Tahoe Dock — "Liquid Glass" shelf (web recreation).

@@ -47,17 +47,24 @@ const marketingBase = {
   dockLockBody:
     "Stop the Dock from jumping between screens on multi-display setups. It stays on the display you choose — always.",
   bentoTitle: "Built for the power user.",
-  ctaTitle: "Get organised today.",
   ctaButton: "Download Dock Tile",
   ctaMetaOpenSource: "Open source",
-  metaAppleSilicon: "Apple silicon",
-  spadesLead: "Also available:",
-  spadesButton: "Spades Audio — per-app volume control",
+  // Closing band + closing Dock (the homepage's ending)
+  closingTitle: "All your apps. One tile.",
+  closingGithubTip: "Source on GitHub",
+  closingGithubLabel: "GitHub",
+  closingWhatsNewTip: "What's new in", // the component appends the version
+  closingWhatsNewLabel: "What's new",
+  closingContactTip: "Get in touch",
+  closingContactLabel: "Contact",
+  closingStudioLabel: "Studio",
+  studioHere: "You're here",
+  studioEarlyAccess: "Early access",
+  opensInNewTab: "(opens in a new tab)",
 } as const;
 
 const marketingUS = {
   ...marketingBase,
-  ctaTitle: "Get organized today.",
   tilesTitle: "Customized tiles with the simple editor.",
   tilesBody:
     "Give every group of apps a face you'll spot at a glance. Pick a color, then a custom SF Symbol from Apple's library or any emoji — and fine-tune its size and weight — all in one simple editor.",
@@ -235,7 +242,6 @@ export const localisedContent = {
     supportLink: "Get in touch",
 
     // Footer
-    footerMessage: "Designed & made with care for macOS",
     privacy: "Privacy",
     terms: "Terms",
   },
@@ -340,7 +346,6 @@ export const localisedContent = {
     supportLink: "Get in touch",
 
     // Footer
-    footerMessage: "Designed & made with care for macOS",
     privacy: "Privacy",
     terms: "Terms",
   },
@@ -445,7 +450,6 @@ export const localisedContent = {
     supportLink: "Get in touch",
 
     // Footer
-    footerMessage: "Designed & made with care for macOS",
     privacy: "Privacy",
     terms: "Terms",
   },

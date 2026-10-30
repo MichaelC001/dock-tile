@@ -21,7 +21,7 @@ only accent**. Narrative the site sells: "iOS-style folders for the Mac's Dock."
 - `next-themes`, class attribute, system default. The **footer `ThemeSwitcher` must stay** — it
   was dropped once during a consolidation and explicitly demanded back.
 - **Signature-dark bands stay dark in BOTH themes** (they simulate macOS chrome or are brand
-  moments): hero, Dock Lock story, Final CTA, Ghost Mode card, and the dark page headers on
+  moments): hero, Dock Lock story, the closing band, Ghost Mode card, and the dark page headers on
   FAQ/release-notes/legal. Only neutral surfaces theme-flip.
 - **Anything visible at load themes via CSS (`dark:` variants / `.dark` rules), NEVER a
   `mounted && resolvedTheme` guard** (one exception, next bullet) — next-themes sets `.dark` on `<html>` before first paint, so
@@ -30,6 +30,10 @@ only accent**. Narrative the site sells: "iOS-style folders for the Mac's Dock."
   images pass both URLs as CSS vars and `.dark` picks one (`hero.tsx` + `.hero-texture`); `<img>`
   variants dual-render with `dark:hidden` / `hidden dark:block` (lazy `next/image`s only fetch the
   visible one); tile mocks use the shared `.tile-face` rule + `--tile-bg`/`--tile-glyph-dark` vars.
+  The dark plate (`#232323 → #0f0f10`), `TileFace`'s dark rim (lit 1px top edge, fainter bottom,
+  0.5px hairline) and the dark glyph glow (`drop-shadow` in the glyph's own colour) are sampled
+  from macOS 26's Dark-style render of Mail.app (2026-10-30, owner: "look at the icons on my
+  Dock") — the real helpers get them from the system's glass pass. Re-sample on a new macOS.
   (The Turbopack stale-`globals.css` quirk is a dev-workflow caveat — restart `next dev` — not a
   reason to theme in JS.)
 - **The lone exception: which theme is *selected* (`ThemeSwitcher`'s active pill).** `<html>` only
@@ -41,10 +45,14 @@ only accent**. Narrative the site sells: "iOS-style folders for the Mac's Dock."
   `undefined`; that mismatches the active button's `className` on every load (shipped in `cd8d437`
   on a wrong premise, fixed 2026-07-09). The whole-component `if (!mounted) return <placeholder/>`
   guard stays banned — that's the empty-circles pop `cd8d437` rightly removed.
+  **Its light-theme tray is `bg-foreground/6` + `border-foreground/10` with a `bg-card` selected
+  pill** (2026-10-30): light `--muted` and `--background` both equal the page's zinc-100, so the
+  token-default tray and pill were invisible ("barely noticeable" — owner). Dark keeps `muted`.
 - Cards have fixed theme character: the Ghost card is always dark (hardcoded whites are correct);
   the Smart Add card flips, so its colours must be theme-aware (`text-zinc-600 dark:text-white/80`).
   The Ghost card runs a charcoal gradient (`from-zinc-800 to-zinc-900`), NOT flat zinc-900 — flat
-  read as one slab with the pure-black Final CTA when stacked on mobile.
+  read as one slab with the pure-black Final CTA that used to follow it on mobile (since
+  2026-10-30 the closing band, on the hero's wallpaper).
 
 ## Adaptive nav
 
@@ -74,11 +82,17 @@ Either guard alone fixes it; both are kept because each is independently correct
 
 Below `md` the pill drops **Download** (`max-md:hidden`) and keeps logo + wordmark + the three
 text links inline — on a phone nobody installs a macOS app from the nav, and the links are the
-contextual actions (the hero + Final CTA still offer Download). No hamburger. The wordmark stays
+contextual actions (the hero + the closing band still offer Download). No hamburger. The wordmark stays
 on mobile (nothing else on a phone names the app) and yields only below 360px
 (`min-[360px]:inline`), where the pill would otherwise touch the viewport edges. The pill must
 always fit the viewport with side gutters — it was the Download button that made the full link
 row overflow phones and forced the (since removed) hamburger.
+
+**The logo always lands on the hero (2026-10-30).** In Next a `<Link href="/">` on `/` is a no-op,
+and from another page it navigates but keeps the old scroll offset (/faq at 600px landed 600px down
+the homepage). So the logo scrolls to top itself on `/` (dropping `#features`) and, from elsewhere,
+sets a ref that an effect on `pathname` consumes once `/` renders — logo clicks only, so
+Back/Forward still restore their position.
 
 ## Typography
 

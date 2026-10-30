@@ -1,15 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { ArrowUpRight, Clock, EyeOff, Ghost, Lock, LockOpen, Settings2, ShieldCheck } from "lucide-react";
-import Link from "next/link";
+import { Clock, EyeOff, Ghost, Lock, LockOpen, Settings2, ShieldCheck } from "lucide-react";
 import Image from "next/image";
 import { useLocale } from "@/components/locale-provider";
-import { siteConfig } from "@/lib/config";
 import { asset } from "@/lib/assets";
-import { trackContactClick, trackExternalLinkClick, trackReleaseNotesClick } from "@/lib/analytics";
 import { Reveal } from "@/components/reveal";
-import { DownloadActionButton } from "@/components/action-button";
 import { TileGlyph } from "@/components/tile-glyph";
 
 /* Native app icons for the Grid/List popover mocks — same assets the
@@ -453,86 +449,6 @@ export function DockLockStory() {
           </p>
         </Reveal>
       </div>
-    </section>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Final CTA — dark band                                               */
-/* ------------------------------------------------------------------ */
-
-export function FinalCta() {
-  const { content } = useLocale();
-  const m = content.marketing;
-
-  return (
-    <section data-nav-tone="dark" className="relative mx-3 mb-3 flex flex-col items-center justify-center overflow-hidden rounded-[2.5rem] bg-black px-6 py-24 text-center md:mx-4 md:mb-4 md:py-32">
-      <div className="grain" />
-      <div className="absolute inset-0 bg-linear-to-b from-transparent to-zinc-900/60" />
-      <Reveal className="relative z-10">
-        <h2 className="mb-12 text-3xl font-bold tracking-[-0.05em] leading-[1.05] text-white md:text-5xl">
-          {m.ctaTitle}
-        </h2>
-        <div className="flex justify-center">
-          <DownloadActionButton tone="light" size="lg" label={m.ctaButton} />
-        </div>
-        <div className="mt-8 flex items-center justify-center gap-4 text-xs font-medium text-white/40">
-          <a
-            href={siteConfig.githubUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => trackExternalLinkClick(siteConfig.githubUrl, "final_cta")}
-            className="hit-area underline decoration-white/20 underline-offset-4 transition-colors duration-300 hover:text-white"
-          >
-            {m.ctaMetaOpenSource}
-          </a>
-          <span className="h-1 w-1 rounded-full bg-white/20" />
-          <Link
-            href="/release-notes"
-            onClick={trackReleaseNotesClick}
-            className="hit-area underline decoration-white/20 underline-offset-4 transition-colors duration-300 hover:text-white"
-          >
-            v{siteConfig.latestVersion}
-          </Link>
-          <span className="h-1 w-1 rounded-full bg-white/20" />
-          <span>macOS 15+</span>
-          <span className="h-1 w-1 rounded-full bg-white/20 max-sm:hidden" />
-          <span className="max-sm:hidden">{m.metaAppleSilicon}</span>
-        </div>
-        <p className="mt-6 text-sm text-white/50">
-          {content.supportText}{" "}
-          <a
-            href={`mailto:${siteConfig.contactEmail}`}
-            onClick={trackContactClick}
-            className="font-medium text-white/80 underline decoration-white/30 underline-offset-4 transition-colors duration-300 hover:text-emerald-400 hover:decoration-emerald-400/50"
-          >
-            {content.supportLink}
-          </a>
-        </p>
-
-        {/* Spades Audio — cross-promo, inline pill */}
-        <a
-          href={siteConfig.spadesAudioUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => trackExternalLinkClick(siteConfig.spadesAudioUrl, "spades_audio_promo_inline")}
-          className="group glass mt-10 inline-flex items-center gap-3 rounded-full px-4 py-2 text-xs text-white/60 transition-colors duration-300 hover:text-white"
-        >
-          <Image
-            src={asset("/assets/spades-audio-icon.svg")}
-            alt=""
-            width={20}
-            height={20}
-            unoptimized
-            className="h-5 w-5 rounded-full"
-          />
-          <span>
-            <span className="text-white/40">{m.spadesLead}</span>{" "}
-            <span className="font-medium">{m.spadesButton}</span>
-          </span>
-          <ArrowUpRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-        </a>
-      </Reveal>
     </section>
   );
 }

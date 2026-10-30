@@ -2,11 +2,9 @@
 
 ## Asset delivery (local dev vs CDN in prod)
 
-Static files under `public/assets/` are mirrored to a CDN — a **Cloudflare R2 bucket**, except
-the subtrees in `S3_PREFIXES` (currently `/assets/bg/`), which live in the **S3 bucket
-`k97static` under `docktile/`** (same bucket + pattern as the rkarthik-zehn portfolio) — and
-served from there in production; local dev serves the same files from `public/`. The switch is
-the pure seam `lib/assets.ts`:
+Static files under `public/assets/` are mirrored to **one** CDN — a **Cloudflare R2 bucket** —
+and served from there in production; local dev serves the same files from `public/`. The switch
+is the pure seam `lib/assets.ts`:
 
 - `asset(path)` maps a root-relative `/assets/...` path (optionally with a `?v=N` cache-buster) to
   a local URL in dev or its CDN URL in prod. Absolute URLs / `data:` URIs pass through untouched.
@@ -14,10 +12,6 @@ the pure seam `lib/assets.ts`:
   (how Vercel builds run)** → the CDN base URL. It's `NEXT_PUBLIC_` so the value inlines client-side.
 - **R2 bucket layout = root** (the bucket is shared with the portfolio, whose videos sit at root
   too): `public/assets/foo.png` → `https://pub-e2f1ef02cb5d42f780dd344d8d5a1816.r2.dev/assets/foo.png`.
-- **S3 keys drop the `/assets` segment**: `public/assets/bg/hero-bg.webp` →
-  `https://k97static.s3.ap-southeast-2.amazonaws.com/docktile/bg/hero-bg.webp`. Moving another
-  subtree to S3 = upload it under `docktile/<subtree>/` + add its `/assets/<subtree>/` prefix to
-  `S3_PREFIXES`.
 
 **Always route new asset references through `asset("/assets/…")`** — never hardcode a bare
 `/assets/...` into an `<Image>`/`url()` again, or it won't switch to R2 in prod. Keep the
@@ -32,6 +26,11 @@ root-relative path in the data arrays; wrap it at the render site (`src={asset(a
 - **Adding/changing an asset**: drop it in `public/assets/`, then upload the file to the R2 bucket
   at the matching key (e.g. `assets/…`) or prod 404s. Kept a filename but changed the bytes? Bump
   its `?v=N` (R2 caches hard).
+- **R2 only — never split assets across buckets again** (owner, 2026-10-31: "let's load it from
+  one place"). The hero wallpapers sat in S3 (`k97static/docktile/bg/`, 2026-09-21 → 10-31) and
+  the next upload went to the wrong bucket. Before calling an upload done, fetch each CDN URL and
+  compare its byte size with the local file: on 2026-10-30 the studio icons were believed
+  uploaded and every one 404'd.
 
 ## Dev port is 3010 (not 3000) — do not change
 

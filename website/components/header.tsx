@@ -22,6 +22,14 @@ export function Header() {
   // place instead of visibly animating on first paint.
   const [ready, setReady] = React.useState(false);
   React.useEffect(() => setReady(true), []);
+  // Set by a logo click on another page; consumed once the homepage renders.
+  const logoToHomeRef = React.useRef(false);
+  React.useEffect(() => {
+    if (pathname === "/" && logoToHomeRef.current) {
+      logoToHomeRef.current = false;
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }
+  }, [pathname]);
   // Which tone of section sits behind the nav right now. Drives an inverse
   // pill: light frost over dark sections, dark frost over light ones.
   const [overDark, setOverDark] = React.useState(true);
@@ -104,6 +112,21 @@ export function Header() {
       >
         <Link
           href="/"
+          // The logo always lands on the hero. On the homepage a link to "/" is
+          // a no-op in Next, so scroll up ourselves (and drop a leftover
+          // #features). From another page Next navigates home but keeps the
+          // old scroll offset, so flag it and the effect below scrolls to top
+          // once "/" renders — logo clicks only, so Back/Forward still restore.
+          onClick={(e) => {
+            if (pathname !== "/") {
+              logoToHomeRef.current = true;
+              return;
+            }
+            e.preventDefault();
+            if (window.location.hash) history.replaceState(null, "", "/");
+            const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+          }}
           className={`flex shrink-0 items-center gap-2 rounded-full py-1.5 pl-1 pr-2.5 transition-colors duration-300 md:pr-3 ${logoHover}`}
         >
           {/* `max-w-none` overrides Tailwind preflight's `img { max-width: 100% }`

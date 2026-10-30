@@ -28,7 +28,9 @@ export function ThemeSwitcher() {
   ];
 
   return (
-    <div className="flex items-center gap-0.5 p-1 rounded-full bg-muted/50 border border-border/50">
+    // Light: `muted`/`background` equal the page colour (zinc-100), so the tray
+    // is a faint foreground tint and the selected pill is the white `card`.
+    <div className="flex items-center gap-0.5 p-1 rounded-full bg-foreground/6 border border-foreground/10 dark:bg-muted/50 dark:border-border/50">
       {themes.map(({ value, icon, label }) => (
         <button
           key={value}
@@ -43,7 +45,7 @@ export function ThemeSwitcher() {
             "hit-area flex items-center justify-center w-7 h-7 rounded-full",
             "transition-[color,background-color,box-shadow,scale] duration-200 active:scale-96",
             active === value
-              ? "bg-background shadow-sm text-foreground"
+              ? "bg-card shadow-sm text-foreground dark:bg-background"
               : "text-muted-foreground hover:text-foreground"
           )}
           aria-label={label}

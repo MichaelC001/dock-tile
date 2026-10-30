@@ -81,9 +81,9 @@ export function PrivacyContent() {
       <LegalHeading>Analytics</LegalHeading>
       <p className="leading-relaxed text-muted-foreground">
         {siteConfig.appName} includes optional, anonymous usage analytics
-        and crash reporting. As a single developer, this is what helps me
-        streamline the software and make it grow — it shows me which
-        features matter and catches crashes I&apos;d otherwise never hear
+        and crash reporting. As a small studio, this is what helps us
+        streamline the software and make it grow — it shows us which
+        features matter and catches crashes we&apos;d otherwise never hear
         about.
       </p>
       <p className="leading-relaxed text-muted-foreground">

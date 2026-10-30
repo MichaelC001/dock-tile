@@ -5,7 +5,12 @@ import { useLocale } from "@/components/locale-provider";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { siteConfig } from "@/lib/config";
 import { trackExternalLinkClick } from "@/lib/analytics";
+import { withReferral } from "@/lib/referral";
 
+const STUDIO_URL = withReferral(siteConfig.authorUrl);
+
+// The legal line under every page: the studio's ©, the theme switcher, and
+// the legal pages. Everything else lives once in the page above it.
 export function Footer() {
   const { content } = useLocale();
   const currentYear = new Date().getFullYear();
@@ -15,15 +20,14 @@ export function Footer() {
       <p className="order-2 justify-self-center text-sm text-muted-foreground md:order-1 md:justify-self-start">
         © {currentYear}{" "}
         <a
-          href={siteConfig.authorUrl}
+          href={STUDIO_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="font-semibold transition-colors duration-300 hover:text-foreground"
-          onClick={() => trackExternalLinkClick(siteConfig.authorUrl, "footer")}
+          onClick={() => trackExternalLinkClick(STUDIO_URL, "footer")}
         >
           {siteConfig.authorName}
         </a>
-        . {content.footerMessage}.
       </p>
 
       <div className="order-1 md:order-2">
@@ -43,15 +47,6 @@ export function Footer() {
         >
           {content.terms}
         </Link>
-        <a
-          href={siteConfig.githubUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hit-area text-muted-foreground transition-colors duration-300 hover:text-foreground"
-          onClick={() => trackExternalLinkClick(siteConfig.githubUrl, "footer")}
-        >
-          GitHub
-        </a>
       </div>
     </footer>
   );

@@ -3,13 +3,18 @@
 ## Page structure
 
 - Single-page marketing site: `Hero → CustomTilesStory (id="features") → DockLockStory →
-  PowerUserSection → FinalCta` + Footer. The standalone `/features` route was deliberately
+  PowerUserSection → ClosingBand` + Footer. The standalone `/features` route was deliberately
   deleted — nav "Features" scrolls to `/#features`. Don't recreate the page.
 - Nav order: **Features · Privacy · FAQ** + Download (Download is `md`+ only — see
   design-system.md "Adaptive nav").
-- `FinalCta` owns the contextual extras: the quiet support "Get in touch" line, version links to
-  `/release-notes` (not GitHub), "Open source" linking to the repo, and the Spades Audio
-  cross-promo pill (formal voice: "Also available: Spades Audio — per-app volume control").
+- **The ending says each thing once (owner, 2026-10-30).** `ClosingBand` = "All your apps. One
+  tile." + Download + the closing Dock (GitHub · What's new · Contact | Studio — see
+  hero-dock-demo.md "Closing Dock"); the shared `Footer` is only the legal line (© Happy Machines
+  Company · Privacy · Terms + theme switcher). Four footer layouts were rejected for repeating
+  links "for the sake of filling up spaces" — don't add link columns, taglines or a second
+  Spades mention. Spades Audio and Lango appear only in the Studio popover. Subpages keep their
+  `ContactCta` band above the same legal line. The site is published by **Happy Machines
+  Company** (`siteConfig.authorName` / `authorUrl`; contact `hello@happymachines.company`).
 
 ## Copy rules
 

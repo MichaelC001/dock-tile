@@ -3,7 +3,7 @@
 
 export const siteConfig = {
   // Contact & Support
-  contactEmail: "support.docktile@rkarthik.co",
+  contactEmail: "hello@happymachines.company",
 
   // Download Links
   downloadUrl: "https://github.com/k97/dock-tile/releases/download/v2.6.2/DockTile-2.6.2.dmg",
@@ -13,6 +13,10 @@ export const siteConfig = {
   // Social & External Links
   githubUrl: "https://github.com/k97/dock-tile",
   spadesAudioUrl: "https://www.spadesaudio.com",
+  spadesAudioName: "Spades Audio",
+  // Lango has no site of its own yet — the studio's product list stands in.
+  langoUrl: "https://happymachines.company/#products",
+  langoName: "Lango",
 
   // App Info
   appName: "Dock Tile",
@@ -23,6 +27,8 @@ export const siteConfig = {
   // Meta — primary domain (docktile.rkarthik.co is retained as a redirecting
   // alias; shipped apps' Sparkle feed URL still points at it, so never drop it)
   siteUrl: "https://docktile.app",
-  authorName: "Karthik",
-  authorUrl: "https://rkarthik.co",
+  // The studio that makes Dock Tile — author/publisher in JSON-LD, the footer's
+  // © line and the closing Dock's Studio tile.
+  authorName: "Happy Machines Company",
+  authorUrl: "https://happymachines.company",
 };

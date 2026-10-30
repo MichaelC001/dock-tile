@@ -6,6 +6,7 @@ import { Settings2 } from "lucide-react";
 import { MacOSDock, type DockApp } from "@/components/ui/mac-os-dock";
 import { TileGlyph, type GlyphName } from "@/components/tile-glyph";
 import { asset } from "@/lib/assets";
+import { anchorPopover } from "@/lib/dock-popover";
 
 /**
  * DockTile hero demo — the interactive macOS Dock (magnification, click bounce)
@@ -105,7 +106,7 @@ const TILES: DemoTile[] = [
 // squircles rendered noticeably larger than the real icons beside them in
 // the Dock. This is the exact same ratio in both themes, on purpose: it's a
 // layout fact of the icon art, not a color-mode concern.
-const ICON_CONTENT_RATIO = "90.625%";
+export const ICON_CONTENT_RATIO = "90.625%";
 
 /* A DockTile tile face — gradient squircle + glyph, inset to match the real
    Finder/Settings icons' safe area (see ICON_CONTENT_RATIO above).
@@ -113,17 +114,37 @@ const ICON_CONTENT_RATIO = "90.625%";
    near-black, and the tile's own tint moves to the glyph instead. All of the
    theming is CSS (`.tile-face` + `dark:` variants) off the pre-paint `.dark`
    class, so a dark-theme load never flashes the light face. */
-function TileFace({ tile }: { tile: DemoTile }) {
+export function TileFace({
+  gradient,
+  darkGlyph,
+  glyph,
+  glyphColor = "#ffffff",
+  glyphSize = "58%",
+  shaded = false,
+}: {
+  gradient: string;
+  darkGlyph: string;
+  glyph: GlyphName;
+  /** Light-theme glyph colour (white by default; dark on a Mono plate). */
+  glyphColor?: string;
+  /** Glyph box as a share of the tile — padded SVGs need more than 58%. */
+  glyphSize?: string;
+  /** Top→bottom glyph shading, as the app's own icons bake it. */
+  shaded?: boolean;
+}) {
   return (
     <div className="relative flex h-full w-full items-center justify-center">
       <div
-        className="tile-face squircle relative flex items-center justify-center overflow-hidden shadow-[inset_0_1px_1px_rgba(255,255,255,0.35),inset_0_-1px_2px_rgba(0,0,0,0.12)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.12),inset_0_-1px_2px_rgba(0,0,0,0.4)]"
+        // Dark: the glass rim macOS 26 draws — a lit 1px edge at the top, a
+        // fainter one at the bottom, a hairline all round (sampled from Mail.app).
+        className="tile-face squircle relative flex items-center justify-center overflow-hidden shadow-[inset_0_1px_1px_rgba(255,255,255,0.35),inset_0_-1px_2px_rgba(0,0,0,0.12)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_0_-1px_0_rgba(255,255,255,0.05),inset_0_0_0_0.5px_rgba(255,255,255,0.06)]"
         style={
           {
             width: ICON_CONTENT_RATIO,
             height: ICON_CONTENT_RATIO,
-            "--tile-bg": tile.gradient,
-            "--tile-glyph-dark": tile.darkGlyph,
+            "--tile-bg": gradient,
+            "--tile-glyph-light": glyphColor,
+            "--tile-glyph-dark": darkGlyph,
           } as React.CSSProperties
         }
       >
@@ -132,10 +153,13 @@ function TileFace({ tile }: { tile: DemoTile }) {
           aria-hidden
           className="absolute inset-x-0 top-0 h-1/2 bg-linear-to-b from-white/25 to-transparent dark:hidden"
         />
-        <span className="relative" style={{ width: "58%", height: "58%" }}>
+        <span className="relative" style={{ width: glyphSize, height: glyphSize }}>
           <TileGlyph
-            name={tile.glyph}
-            className="h-full w-full text-white drop-shadow-[0_1px_1.5px_rgba(0,0,0,0.28)] dark:text-(--tile-glyph-dark)"
+            name={glyph}
+            shaded={shaded}
+            // Dark: the tinted glyph glows onto the plate instead of casting a
+            // shadow, as macOS 26 Dark-style icons do (Mail's envelope, Finder).
+            className="h-full w-full text-(--tile-glyph-light) drop-shadow-[0_1px_1.5px_rgba(0,0,0,0.28)] dark:text-(--tile-glyph-dark) dark:drop-shadow-[0_0_5px_color-mix(in_srgb,var(--tile-glyph-dark)_45%,transparent)]"
           />
         </span>
       </div>
@@ -184,7 +208,7 @@ const APPS: DockApp[] = [
     name: "Finder",
     content: iconFace("/assets/app-icons/finder.png?v=3", "/assets/app-icons/finder-dark.png?v=4"),
   },
-  ...TILES.map((t) => ({ id: t.id, name: t.name, content: <TileFace tile={t} /> })),
+  ...TILES.map((t) => ({ id: t.id, name: t.name, content: <TileFace gradient={t.gradient} darkGlyph={t.darkGlyph} glyph={t.glyph} shaded /> })),
   {
     id: "settings",
     name: "System Settings",
@@ -236,16 +260,14 @@ export function DockDemo({ className = "" }: { className?: string }) {
     if (!root || !rect || !tile) return false;
     const rootBox = root.getBoundingClientRect();
     if (rootBox.width === 0) return false;
-    // Product-tier width, capped so the popover keeps its 8px gutters even on
-    // viewports narrower than the grid tier (320px phones).
-    const width = Math.min(widthFor(tile), window.innerWidth - 16);
-    const centre = rect.left + rect.width / 2 - rootBox.left;
-    let left = centre - width / 2;
-    const minLeft = 8 - rootBox.left;
-    const maxLeft = window.innerWidth - 8 - width - rootBox.left;
-    left = Math.max(minLeft, Math.min(left, maxLeft));
-    const bottom = rootBox.bottom - rect.top + 14; // 14px gap above the icon
-    setPos({ left, arrow: centre - left, bottom, width });
+    setPos(
+      anchorPopover({
+        iconRect: rect,
+        rootRect: rootBox,
+        width: widthFor(tile),
+        viewportWidth: window.innerWidth,
+      }),
+    );
     return true;
   }, []);
 

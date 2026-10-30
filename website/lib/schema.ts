@@ -7,11 +7,11 @@ import { localisedContent } from "@/lib/i18n";
 
 const content = localisedContent["en-AU"];
 
-// The app is published by an individual, not a company — Person (with the
-// GitHub repo as sameAs) also disambiguates "Dock Tile" the app from Apple's
-// NSDockTile API when AI engines resolve the entity.
-const person = {
-  "@type": "Person",
+// Dock Tile is made and published by the studio, Happy Machines Company. The
+// app's `sameAs` (its GitHub repo) is what disambiguates "Dock Tile" the app
+// from Apple's NSDockTile API when AI engines resolve the entity.
+const organization = {
+  "@type": "Organization",
   name: siteConfig.authorName,
   url: siteConfig.authorUrl,
 };
@@ -21,7 +21,7 @@ export const websiteSchema = {
   "@type": "WebSite",
   name: siteConfig.appName,
   url: siteConfig.siteUrl,
-  publisher: person,
+  publisher: organization,
 };
 
 export const softwareApplicationSchema = {
@@ -42,8 +42,8 @@ export const softwareApplicationSchema = {
     price: 0,
     priceCurrency: "USD",
   },
-  author: person,
-  publisher: person,
+  author: organization,
+  publisher: organization,
   sameAs: [siteConfig.githubUrl],
   featureList: [
     ...content.features.map((f) => `${f.title} — ${f.description}`),

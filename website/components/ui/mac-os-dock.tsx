@@ -10,6 +10,16 @@ interface DockApp {
   icon?: string
   /** Custom node rendered in place of the <img> (fills the scaled box). */
   content?: React.ReactNode
+  /** A non-interactive separator, like the real Dock's — never magnified. */
+  kind?: "divider"
+  /** Render the item as a real link (crawlable, keyboard-native). */
+  href?: string
+  /** With `href`: open in a new tab and announce it via `externalHint`. */
+  external?: boolean
+  /** Replaces `name` in the hover tooltip (the accessible name stays `name`). */
+  tooltip?: React.ReactNode
+  /** Caption under the icon, shown only where there is no hover (touch). */
+  label?: React.ReactNode
 }
 
 interface MacOSDockProps {
@@ -19,6 +29,8 @@ interface MacOSDockProps {
   onAppClick: (appId: string, rect: DOMRect | null) => void
   openApps?: string[]
   className?: string
+  /** Appended to an external link item's accessible name, e.g. "(opens in a new tab)". */
+  externalHint?: string
 }
 
 // The server has no viewport, so SSR renders at this default. The client MUST
@@ -33,12 +45,13 @@ const MacOSDock: React.FC<MacOSDockProps> = ({
   onAppClick,
   openApps = [],
   className = "",
+  externalHint,
 }) => {
   const [mouseX, setMouseX] = useState<number | null>(null)
   const [currentScales, setCurrentScales] = useState<number[]>(apps.map(() => 1))
   const [currentPositions, setCurrentPositions] = useState<number[]>([])
   const dockRef = useRef<HTMLDivElement>(null)
-  const iconRefs = useRef<(HTMLDivElement | null)[]>([])
+  const iconRefs = useRef<(HTMLElement | null)[]>([])
   const animationFrameRef = useRef<number | undefined>(undefined)
   const lastMouseMoveTime = useRef<number>(0)
 
@@ -82,7 +95,29 @@ const MacOSDock: React.FC<MacOSDockProps> = ({
   const [config, setConfig] = useState(SSR_DEFAULT_CONFIG)
   const { baseIconSize, maxScale, effectWidth } = config
   const minScale = 1.0
-  const baseSpacing = Math.max(4, baseIconSize * 0.08)
+  // Touch labels sit under the icons and are wider than them, so where there
+  // is no hover a labelled Dock spaces its items for the text. Starts false on
+  // both server and client (hydration-safe), like `config`.
+  const hasLabels = apps.some(app => app.label)
+  const [noHover, setNoHover] = useState(false)
+  useEffect(() => {
+    if (!hasLabels) return
+    const query = window.matchMedia("(hover: none)")
+    const sync = () => setNoHover(query.matches)
+    sync()
+    query.addEventListener("change", sync)
+    return () => query.removeEventListener("change", sync)
+  }, [hasLabels])
+  const baseSpacing =
+    hasLabels && noHover ? baseIconSize * 0.55 : Math.max(4, baseIconSize * 0.08)
+  const dividerWidth = Math.max(8, baseIconSize * 0.2)
+  // Width of item i at a given scale. Dividers never magnify. With no dividers
+  // every layout formula below reduces to the original index-based one.
+  const itemWidth = useCallback(
+    (app: DockApp, scale: number) =>
+      app.kind === "divider" ? dividerWidth : baseIconSize * scale,
+    [baseIconSize, dividerWidth],
+  )
 
   useEffect(() => {
     const handleResize = () => {
@@ -100,8 +135,12 @@ const MacOSDock: React.FC<MacOSDockProps> = ({
         return apps.map(() => minScale)
       }
 
-      return apps.map((_, index) => {
-        const normalIconCenter = index * (baseIconSize + baseSpacing) + baseIconSize / 2
+      let restX = 0
+      return apps.map(app => {
+        const restWidth = itemWidth(app, minScale)
+        const normalIconCenter = restX + restWidth / 2
+        restX += restWidth + baseSpacing
+        if (app.kind === "divider") return minScale
         const minX = mousePosition - effectWidth / 2
         const maxX = mousePosition + effectWidth / 2
 
@@ -116,21 +155,21 @@ const MacOSDock: React.FC<MacOSDockProps> = ({
         return minScale + scaleFactor * (maxScale - minScale)
       })
     },
-    [apps, baseIconSize, baseSpacing, effectWidth, maxScale, minScale],
+    [apps, itemWidth, baseSpacing, effectWidth, maxScale, minScale],
   )
 
   const calculatePositions = useCallback(
     (scales: number[]) => {
       let currentX = 0
 
-      return scales.map(scale => {
-        const scaledWidth = baseIconSize * scale
+      return scales.map((scale, index) => {
+        const scaledWidth = itemWidth(apps[index], scale)
         const centerX = currentX + scaledWidth / 2
         currentX += scaledWidth + baseSpacing
         return centerX
       })
     },
-    [baseIconSize, baseSpacing],
+    [apps, itemWidth, baseSpacing],
   )
 
   useEffect(() => {
@@ -218,11 +257,17 @@ const MacOSDock: React.FC<MacOSDockProps> = ({
   const contentWidth =
     currentPositions.length > 0
       ? Math.max(
-          ...currentPositions.map((pos, index) => pos + (baseIconSize * currentScales[index]) / 2),
+          ...currentPositions.map(
+            (pos, index) => pos + itemWidth(apps[index], currentScales[index] ?? minScale) / 2,
+          ),
         )
-      : apps.length * (baseIconSize + baseSpacing) - baseSpacing
+      : apps.reduce((sum, app) => sum + itemWidth(app, minScale), 0) +
+        (apps.length - 1) * baseSpacing
 
   const padding = Math.max(8, baseIconSize * 0.12)
+  // A Dock of real links must not itself be a button (nested interactive
+  // elements are invalid ARIA); the hero's button-only Dock keeps its role.
+  const hasLinks = apps.some(app => app.href)
 
   return (
     <div
@@ -230,8 +275,8 @@ const MacOSDock: React.FC<MacOSDockProps> = ({
       onMouseLeave={handleMouseLeave}
       onMouseMove={handleMouseMove}
       ref={dockRef}
-      role="button"
-      tabIndex={0}
+      role={hasLinks ? undefined : "button"}
+      tabIndex={hasLinks ? undefined : 0}
       style={{
         width: `${contentWidth + padding * 2}px`,
         background: "rgba(45, 45, 45, 0.75)",
@@ -247,7 +292,7 @@ const MacOSDock: React.FC<MacOSDockProps> = ({
       }}
     >
       <div
-        className="relative"
+        className={cn("relative", hasLabels && "[@media(hover:none)]:mb-4")}
         style={{
           height: `${baseIconSize}px`,
           width: "100%",
@@ -258,40 +303,42 @@ const MacOSDock: React.FC<MacOSDockProps> = ({
           const position = currentPositions[index] || 0
           const scaledSize = baseIconSize * scale
 
-          return (
-            <div
-              className="group absolute cursor-pointer flex flex-col items-center justify-end"
-              key={app.id}
-              onClick={() => handleAppClick(app.id, index)}
-              onKeyDown={e => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault()
-                  handleAppClick(app.id, index)
-                }
-              }}
-              data-app-id={app.id}
-              ref={el => {
-                iconRefs.current[index] = el
-              }}
-              role="button"
-              tabIndex={0}
-              style={{
-                left: `${position - scaledSize / 2}px`,
-                bottom: "0px",
-                width: `${scaledSize}px`,
-                height: `${scaledSize}px`,
-                transformOrigin: "bottom center",
-                zIndex: Math.round(scale * 10),
-              }}
-              aria-label={app.name}
-            >
+          if (app.kind === "divider") {
+            return (
+              <div
+                aria-hidden
+                className="absolute flex items-center justify-center"
+                key={app.id}
+                style={{
+                  left: `${position - dividerWidth / 2}px`,
+                  bottom: "0px",
+                  width: `${dividerWidth}px`,
+                  height: `${baseIconSize}px`,
+                }}
+              >
+                <span className="h-[70%] w-px bg-white/25" />
+              </div>
+            )
+          }
+
+          const iconShadow = `drop-shadow(0 ${scale > 1.2 ? Math.max(2, baseIconSize * 0.05) : Math.max(1, baseIconSize * 0.03)}px ${scale > 1.2 ? Math.max(4, baseIconSize * 0.1) : Math.max(2, baseIconSize * 0.06)}px rgba(0,0,0,${0.2 + (scale - 1) * 0.15}))`
+          const itemClass = "group absolute cursor-pointer flex flex-col items-center justify-end"
+          const itemStyle: React.CSSProperties = {
+            left: `${position - scaledSize / 2}px`,
+            bottom: "0px",
+            width: `${scaledSize}px`,
+            height: `${scaledSize}px`,
+            transformOrigin: "bottom center",
+            zIndex: Math.round(scale * 10),
+          }
+          const setRef = (el: HTMLElement | null) => {
+            iconRefs.current[index] = el
+          }
+
+          const body = (
+            <>
               {app.content ? (
-                <div
-                  className="relative h-full w-full"
-                  style={{
-                    filter: `drop-shadow(0 ${scale > 1.2 ? Math.max(2, baseIconSize * 0.05) : Math.max(1, baseIconSize * 0.03)}px ${scale > 1.2 ? Math.max(4, baseIconSize * 0.1) : Math.max(2, baseIconSize * 0.06)}px rgba(0,0,0,${0.2 + (scale - 1) * 0.15}))`,
-                  }}
-                >
+                <div className="relative h-full w-full" style={{ filter: iconShadow }}>
                   {app.content}
                 </div>
               ) : (
@@ -301,22 +348,33 @@ const MacOSDock: React.FC<MacOSDockProps> = ({
                   className="object-contain"
                   height={scaledSize}
                   src={app.icon}
-                  style={{
-                    filter: `drop-shadow(0 ${scale > 1.2 ? Math.max(2, baseIconSize * 0.05) : Math.max(1, baseIconSize * 0.03)}px ${scale > 1.2 ? Math.max(4, baseIconSize * 0.1) : Math.max(2, baseIconSize * 0.06)}px rgba(0,0,0,${0.2 + (scale - 1) * 0.15}))`,
-                  }}
+                  style={{ filter: iconShadow }}
                   width={scaledSize}
                 />
               )}
 
               {/* Native-style hover tooltip. Sits in the Dock's own stacking
                   context (backdrop-filter), so it always renders BEHIND the
-                  DockTile popover (which is a higher-z sibling of the Dock). */}
+                  DockTile popover (which is a higher-z sibling of the Dock).
+                  Items that carry a touch label hide it where there's no hover. */}
               <span
                 aria-hidden
-                className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-white/10 bg-zinc-900/85 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-md backdrop-blur-sm transition-opacity duration-150 group-hover:opacity-100"
+                className={cn(
+                  "pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-white/10 bg-zinc-900/85 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-md backdrop-blur-sm transition-opacity duration-150 group-hover:opacity-100",
+                  app.label && "[@media(hover:none)]:hidden",
+                )}
               >
-                {app.name}
+                {app.tooltip ?? app.name}
               </span>
+
+              {app.label && (
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute top-full left-1/2 mt-1.5 hidden -translate-x-1/2 items-center whitespace-nowrap text-[11px] leading-none font-medium text-white/75 [@media(hover:none)]:flex"
+                >
+                  {app.label}
+                </span>
+              )}
 
               {openApps.includes(app.id) && (
                 <div
@@ -333,6 +391,49 @@ const MacOSDock: React.FC<MacOSDockProps> = ({
                   }}
                 />
               )}
+            </>
+          )
+
+          // Link items are real anchors: native Enter activation (no keydown
+          // handler — its preventDefault would kill the navigation), crawlable,
+          // and an accessible name that announces a new tab.
+          if (app.href) {
+            return (
+              <a
+                className={itemClass}
+                key={app.id}
+                href={app.href}
+                {...(app.external && { target: "_blank", rel: "noopener noreferrer" })}
+                onClick={() => handleAppClick(app.id, index)}
+                data-app-id={app.id}
+                ref={setRef}
+                style={itemStyle}
+                aria-label={app.external && externalHint ? `${app.name} ${externalHint}` : app.name}
+              >
+                {body}
+              </a>
+            )
+          }
+
+          return (
+            <div
+              className={itemClass}
+              key={app.id}
+              onClick={() => handleAppClick(app.id, index)}
+              onKeyDown={e => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault()
+                  handleAppClick(app.id, index)
+                }
+              }}
+              data-app-id={app.id}
+              ref={setRef}
+              role="button"
+              tabIndex={0}
+              style={itemStyle}
+              aria-label={app.name}
+            >
+              {body}
             </div>
           )
         })}

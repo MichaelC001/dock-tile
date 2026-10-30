@@ -3,8 +3,8 @@ import {
   CustomTilesStory,
   PowerUserSection,
   DockLockStory,
-  FinalCta,
 } from "@/components/home-sections";
+import { ClosingBand } from "@/components/closing-band";
 import { Footer } from "@/components/footer";
 import { JsonLd } from "@/components/json-ld";
 import { HeroVeil } from "@/components/hero-veil";
@@ -39,7 +39,7 @@ export default function Home() {
         <CustomTilesStory />
         <DockLockStory />
         <PowerUserSection />
-        <FinalCta />
+        <ClosingBand />
         <Footer />
       </main>
     </>
