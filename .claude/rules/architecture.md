@@ -147,6 +147,17 @@ with the right bundle id at the DELETED old folder and every check called it fin
   (that needs Accessibility, which the main app has only with Dock Lock on); and the +1 s read can come
   before the new Dock's own write-back a few seconds after launch — accepted, because that write-back
   carries the list the new Dock loaded, which is ours, and self-heal catches a later drop.
+- **No Dock after 5 s → `launchctl kickstart gui/<uid>/com.apple.Dock.agent` (Q21)**: launchd relaunches
+  a SIGKILLed Dock, but a Dock something else stopped cleanly just before (a Terminal `killall Dock`) can
+  be left `service inactive` and not relaunched — measured 2026-10-30 (once in six SIGTERMs), the Dock
+  stayed down for over a minute while our check passed on the plist. The fallback path is not
+  exercised by any test (the state didn't reproduce on demand); `kickstart` itself restored that Dock.
+- **The Dock re-resolves entries through Launch Services (macOS 27, measured 2026-10-30)**: on load it
+  rewrote a pinned entry's path to whatever Launch Services resolves its bundle id to — 3/3, from a
+  missing path, from another existing bundle, and with the helper quit. So a stale LS registration (the
+  deleted old folder of a renamed tile) is the likelier cause of the 2026-10-29 incident than the write
+  race alone; verification would then report `dockChangeNotKept` rather than fix it. Open as an issue
+  with its experiment; it is also why seeding the Dock plist can't exercise self-heal's stale-entry path.
 - **It ignores the caller's cancellation**: it runs in an unstructured task, because once the Dock is
   killed the check must finish (a cancelled window `.task` would otherwise turn the PID poll into a spin).
 - **Batches (Q9/Q12/Q16/Q18):** the batch expects presence only for tiles pinned BEFORE its re-seat

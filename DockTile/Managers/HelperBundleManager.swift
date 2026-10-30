@@ -2068,12 +2068,14 @@ final class HelperBundleManager {
         // Re-check ONLY what was retried: a tile dropped as busy belongs to its own operation, and
         // re-checking it after that operation finished would report a false STILL.
         await restartAndWait()
-        let stillUnmet = leavingBusyTiles(unmetExpectations(toRetry, in: readApps(), sameFile: sameFile))
+        let unmetAfterRetry = unmetExpectations(toRetry, in: readApps(), sameFile: sameFile)
+        let stillUnmet = leavingBusyTiles(unmetAfterRetry)
         for expectation in stillUnmet {
             DiagnosticsLog.shared.log("dock", "\(expectation.name) STILL not at its expected Dock path after retry")
         }
-        if stillUnmet.isEmpty {
-            DiagnosticsLog.shared.log("dock", "\(toRetry.map(\.name).joined(separator: ", ")) verified on retry")
+        let verified = toRetry.filter { !unmetAfterRetry.contains($0) }
+        if !verified.isEmpty {
+            DiagnosticsLog.shared.log("dock", "\(verified.map(\.name).joined(separator: ", ")) verified on retry")
         }
         return stillUnmet.isEmpty
     }
@@ -2129,22 +2131,51 @@ final class HelperBundleManager {
     private func restartDockAndWaitForNewDock() async {
         let oldPID = Self.runningDockPID(other: nil)
         restartDock()
-        var newPID: pid_t?
-        let deadline = Date().addingTimeInterval(5)
-        while Date() < deadline {
-            if let pid = Self.runningDockPID(other: oldPID) {
-                newPID = pid
-                break
-            }
-            try? await Task.sleep(nanoseconds: 50_000_000)
-        }
         let oldLabel = oldPID.map(String.init) ?? "none"
-        if let newPID {
+        if let newPID = await waitForDock(other: oldPID) {
             DiagnosticsLog.shared.log("dock", "Dock restarted (pid \(oldLabel) → \(newPID))", verbose: true)
         } else {
-            DiagnosticsLog.shared.log("dock", "no new Dock within 5 s (pid \(oldLabel))")
+            // No Dock came back. launchd relaunches a SIGKILLed Dock, but one that something else
+            // stopped cleanly just before (a Terminal `killall Dock`, another tool) is marked
+            // "service inactive" and is NOT relaunched — measured 2026-10-30: the Dock stayed down
+            // for over a minute. Start it ourselves rather than leave the user without a Dock.
+            DiagnosticsLog.shared.log("dock", "no new Dock within 5 s (pid \(oldLabel)) — starting it via launchctl")
+            kickstartDock()
+            if let startedPID = await waitForDock(other: nil) {
+                DiagnosticsLog.shared.log("dock", "Dock started via launchctl (pid \(startedPID))")
+            } else {
+                DiagnosticsLog.shared.log("dock", "Dock still not running after launchctl kickstart")
+            }
         }
         try? await Task.sleep(nanoseconds: 1_000_000_000)
+    }
+
+    /// Polls every 50 ms, for up to 5 s, for a live Dock whose pid isn't `other` (nil = any Dock).
+    private func waitForDock(other: pid_t?) async -> pid_t? {
+        let deadline = Date().addingTimeInterval(5)
+        while Date() < deadline {
+            if let pid = Self.runningDockPID(other: other) { return pid }
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
+        return nil
+    }
+
+    /// Starts the Dock's launchd agent (`launchctl kickstart gui/<uid>/com.apple.Dock.agent`).
+    private func kickstartDock() {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/launchctl")
+        process.arguments = ["kickstart", "gui/\(getuid())/com.apple.Dock.agent"]
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        do {
+            try process.run()
+            process.waitUntilExit()
+            if process.terminationStatus != 0 {
+                DiagnosticsLog.shared.log("dock", "launchctl kickstart of the Dock exited \(process.terminationStatus)")
+            }
+        } catch {
+            DiagnosticsLog.shared.log("dock", "launchctl kickstart of the Dock FAILED — \(error.localizedDescription)")
+        }
     }
 
     /// The pid of a live Dock other than `other` (nil = any live Dock).

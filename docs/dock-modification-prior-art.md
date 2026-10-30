@@ -375,10 +375,11 @@ Dock early.
   question mark" ([Apple Support](https://support.apple.com/guide/mac-help/if-the-dock-contains-a-question-mark-mchlp1412/mac));
   it heals if an app is later installed at that path (Elliot Jordan, above); a dockutil user with
   wrong paths got question marks and had to unpin and re-pin
-  ([#171](https://github.com/kcrawford/dockutil/issues/171)). **Inference:** for entries like ours
-  (no `book`), the Dock resolves by `_CFURLString` and does not fall back to `bundle-identifier`.
-  So a bundle-id-only check cannot tell a live entry from a dead one. That is exactly the hole that
-  let the 2026-10-29 check pass.
+  ([#171](https://github.com/kcrawford/dockutil/issues/171)). **Inference (contradicted 2026-10-30,
+  see §7):** for entries like ours (no `book`), the Dock resolves by `_CFURLString` and does not fall
+  back to `bundle-identifier`. Measured on macOS 27, the Dock DOES rewrite an entry carrying
+  `bundle-identifier` to the path Launch Services resolves that id to. A bundle-id-only check still
+  cannot tell a live entry from a dead one, which is the hole that let the 2026-10-29 check pass.
 - `file-mod-date = 0` in our stale entry: what the Dock writes there, and whether 0 means "never
   resolved", is **not documented** anywhere found.
 
@@ -468,6 +469,31 @@ each trial from what the running Dock showed.)
 Not tested: whether SIGKILL loses other Dock-owned state (Spaces arrangement, a drag in progress).
 Nothing visible changed over ~60 SIGKILLs, but that is not a check. Also not tested: `launchctl
 unload` / `bootout`.
+
+## 7. Hands-on findings with the 2.6.2 build (2026-10-30, macOS 27, the owner's Mac)
+
+Found while verifying the fix (Task 7 of the 2.6.2 plan); evidence in the plan's progress ledger.
+
+- **The Dock re-resolves a pinned entry through Launch Services when it loads.** A dev tile's
+  entry (carrying `bundle-identifier`) was pointed at another path and the Dock restarted with
+  SIGKILL. Each time the Dock wrote the entry back to the tile's real bundle — 3/3: from a missing
+  path, from another existing bundle, and with the tile's helper quit.
+  `LSCopyApplicationURLsForBundleIdentifier` listed exactly that one path.
+  **Hypothesis (unproven):** the 2026-10-29 stale entry came from a Launch Services registration of
+  the deleted old folder that outlived it, which the Dock then wrote back — not only from a write
+  race. If so, 2.6.2's verification reports it (`dockChangeNotKept`) but cannot fix it while the
+  stale registration stands. Tracked as its own issue with the experiment (register a helper copy,
+  delete it without unregistering, rename the tile).
+- **A cleanly stopped Dock is not always relaunched.** A Terminal-style `killall Dock` (SIGTERM)
+  left `service inactive: com.apple.Dock.agent` in launchd's log and no Dock for over a minute,
+  once in six tries; `launchctl kickstart gui/<uid>/com.apple.Dock.agent` brought it back. The Dock
+  agent's `KeepAlive` is `SuccessfulExit: false`, which relaunches only after an unsuccessful exit.
+  2.6.2 now kickstarts the Dock when none appears within 5 s of its own restart.
+- **The plan's baseline timing could not reproduce the race (0/4):** Update's own Dock write lands
+  4–5 s after the button press (helper build + icon compile), outside §6's ≤ 2.5 s window.
+- **The CI runners don't reproduce the SIGTERM race either** (`dock-kill-check`, 0/6 lost on
+  macOS 15.7.9 and 26.6.2), while SIGKILL kept the write 12/12 there. CI proves SIGKILL is safe on
+  15 and 26; the race itself is reproduced only on macOS 27 (§6).
 
 ## Could not verify
 
