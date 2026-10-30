@@ -59,7 +59,10 @@ struct DockTileApp: App {
                     // user's live dev tiles (migration once corrupted one mid-generation).
                     guard !AppEnvironment.isRunningTests else { return }
                     // Once per launch: a window reopened mid-launch must not start a second batch.
-                    guard HelperMigrationManager.beginLaunchMaintenance() else { return }
+                    guard HelperMigrationManager.beginLaunchMaintenance() else {
+                        DiagnosticsLog.shared.log("migration", "Launch maintenance already started this launch — skipped for the reopened window", verbose: true)
+                        return
+                    }
 
                     // Migrate stale helper bundles after app launch
                     let migration = HelperMigrationManager(configManager: configManager)
