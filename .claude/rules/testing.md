@@ -159,6 +159,11 @@ real app's icon through `NSWorkspace` gets the CURRENT style, so `AppsFacePrevie
 Clear or Tinted (2026-10-19). Run the suite on Default, or pin a style with `AppIconStyleRenderer`.
 UI/integration tests run locally only.
 
+**Filesystem tests: resolve temp paths with `realpath()`, not `URL.resolvingSymlinksInPath()`** —
+the latter deliberately strips `/private`, so a `/System/Volumes/Data` spelling built from it does
+not exist (`dataVolumeSpellingIsCurrent` caught this with a `#require`, 2026-10-29). Count suites by
+`Test case '<Suite>/` prefixes: a name regex without digits silently undercounts.
+
 **Count tests per suite, not by grepping a whole log.** `grep -c "passed"` over an `xcodebuild`
 log drifted between runs of the same tree (748/750/765 for one branch), so a "+N tests" claim
 built on it cannot be checked. Report `-only-testing:` per-suite executed counts and the

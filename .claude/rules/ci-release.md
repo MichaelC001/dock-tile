@@ -32,6 +32,12 @@ months while the binary and appcast said 15.0 — macOS 15 users ran a build the
 a path nothing tested, and the 2.0.2 oversized-tile report came from there. Raising the floor is
 therefore a single edit to `Base.xcconfig` plus whatever the guard then lists.
 
+**A CI check's negative control goes on a throwaway branch (2026-10-29).** Invert one expectation in
+a commit on `<branch>-negative`, dispatch it, require it to FAIL with the expected count, then delete
+the branch — no force push, and the inverted commit never reaches `main`. It earned its keep at once:
+`dock-kill-check`'s inverted trial passed its capture on macOS 15, exposing a blind measurer (the
+stub's generic icon was near-white on the bar) before either run was trusted.
+
 **Run a feature branch through CI BEFORE merging it (2026-10-20).** The App Grid work sat as 25
 local commits and first met CI on release day, where it surfaced two release blockers (a compile
 deadlock, a renderer-dependent preview test). `gh workflow run ci.yml --ref <branch>` runs any branch.

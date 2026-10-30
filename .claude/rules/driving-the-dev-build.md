@@ -50,11 +50,27 @@ to <one statement>` reliably. The multi-statement `tell p … end tell` block fo
 fails with *"Can't get window 1 … Invalid index (-1719)"* on the same window it just resolved.
 Prefer one statement per `osascript` call and parse in the shell.
 
-Useful reads (all read-only, no clicking needed):
-`position/size of window 1` · `description of every UI element of toolbar 1 of window 1` ·
-`size of every checkbox of scroll area 1 of group 2 of splitter group 1 of group 1 of window 1` ·
-`set selected of row N of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of
-window 1 to true` (selects a sidebar row — `click at {x,y}` frequently does nothing here).
+Paths (re-measured 2026-10-30 — the inspector added a split level, so the 2.4-era paths fail with
+-1719). With `S` = `splitter group 1 of group 1 of splitter group 1 of group 1 of window 1`:
+- sidebar rows: `row N of outline 1 of scroll area 1 of group 1 of S`; read labels with
+  `value of static text 1 of UI element 1 of every row of …` and pick N by label — indices shift as
+  tiles are added or deleted (`set selected of row N … to true` selects; `click at {x,y}` often does nothing);
+- detail pane: `scroll area 1 of group 2 of S` (tile name = `text field 1`, Show Tile = `checkbox 1`);
+  a Settings pane nests one `group 1` deeper;
+- toolbar: `UI element N of toolbar 1 of window 1`, chosen by `description` (Update / Add to Dock /
+  Remove from Dock is the 5th, Delete Tile the 4th); a confirmation sheet's buttons are matched by
+  `description` (`whose description is "Delete"`), never by index.
+
+Quirks paid for in the 2.6.2 hands-on:
+- **The window drops out of AX** (`count windows` = 0) right after launch and after some Dock restarts,
+  while CG still lists it on screen. Re-count before every click; a click in that state is silently lost.
+- **Setting a text field's value reaches the SwiftUI binding only when the field is focused**: `set
+  focused of text field 1 … to true` first, then read the SAVED config before pressing anything — an
+  unfocused set changed the field's text while Update built the old name.
+- **`open -g` on the running app reopens the SAME `Window`**, so the window `.task` does not re-run;
+  closing + reopening this way cannot exercise once-per-launch logic.
+- Compound shell commands with `$(…)` captures are refused by the permission layer; put such
+  sequences in a scratch script with literal paths and run that.
 
 ## Find the dev app's PID by its .app path
 
